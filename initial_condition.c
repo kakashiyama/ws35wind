@@ -40,7 +40,7 @@ int main()
     return 0;
 }
 
-/* rAとdudxAとLambda、Tを振って */
+/* rAとdudxAとLambda、Tを振って... */
 
 void set_initial_guess_at_rA(double rA_tmp, double vA_tmp, double dudxA_tmp, double *BrA, double *rhoA, double *vphiA)
 {
