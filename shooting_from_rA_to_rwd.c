@@ -56,7 +56,7 @@ int main()
     
     /* trial parameters at rA */
     double rA = .1*Rsun;
-    double vA = .3*michel_wind_velocity(Rwd,Bwd,Omega,Mdot); /* normalized by the Michel velocity */
+    double vA = .1*michel_wind_velocity(Rwd,Bwd,Omega,Mdot); /* normalized by the Michel velocity */
     double dudxA = .5;
     double TA = 1.0e5;
     double LrA = 1.e38;
@@ -151,7 +151,7 @@ void calc_dVrdr_2ststep_and_more(double vrinput, double *vroutput, double r, dou
     double Ar = Br/sqrt(4.*M_PI*rho);
     double Aphi = Bphi/sqrt(4.*M_PI*rho);
     
-    double denominator_of_dvrdr = vrinput*vrinput-kB*T/mu_mol/Mu - Aphi*Aphi*vrinput*vrinput/(vrinput*vrinput-Ar*Ar)*r/vrinput;
+    double denominator_of_dvrdr = (vrinput*vrinput -kB*T/mu_mol/Mu - Aphi*Aphi*vrinput*vrinput/(vrinput*vrinput-Ar*Ar))*r/vrinput;
     double dPdr_term = 3.*kappa*Lr/16./M_PI/arad/C/pow(T,3.)/r*(rho*kB/mu_mol/Mu+4./3.*arad*pow(T,3.)) + 2.*kB*T/mu_mol/Mu;
     double gravity_term = -G*Mwd/r;
     double centrifugal_force_term = vphi*vphi;
