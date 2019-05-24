@@ -69,7 +69,7 @@ int main()
     
     /* set radial coordinate */
     double r[rbin],dr;
-    set_r_from_rA_to_rWD(rA,radius);
+    set_r_from_rA_to_rWD(rA,r);
     
     /* calculate the 1st step */
     double T,vr,Br,Bphi,vphi,Lr,rho;
