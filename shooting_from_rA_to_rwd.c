@@ -16,7 +16,7 @@ const double Rsun = 6.9551e10;
 const double Yr = 365.*24.*60.*60.;
 
 /* model parameters */
-const double mu_mol = 2.0;
+const double mu_mol = 0.5;
 const double Mwd = 1.0*Msun;
 const double Rwd = 3.0e8;
 const double Bwd = 1.0e9;
@@ -35,13 +35,14 @@ void set_para_at_rA(double rA_tmp, double vA_tmp, double dudxA_tmp, double TA_tm
                     double *BrA, double *rhoA, double *vphiA, double *BphiA, double *Fm, double *FB, double *Lang, double *etot);
 void calc_dTdr(double Tinput, double *Toutput, double dr, double r, double rho, double Lr, double kappa);
 void calc_dVrdr_1ststep(double vrinput, double *vroutput, double dr, double dudxA, double vA, double rA);
-void calc_dVrdr_2ststep_and_more(double vrinput, double *vroutput, double r, double dr, double rho, double Br, double Bphi, double Vphi, double T, double Lr, double kappa);
+void calc_dVrdr_2ststep_and_more(double vrinput, double r, double dr, double rho, double Br, double Bphi, double vphi, double T, double Lr, double kappa,
+                                 double *vroutput, double *denominator_of_dvrdr, double *numerator_of_dvrdr);
 void solve_constraint_eqs(double r, double rA, double vA, double vr, double T, double Fm, double FB, double Lang, double etot,
-                          double *Br, double *Bphi, double *vphi, double *Lr, double *rho);
+                          double *Br, double *Bphi, double *vphi, double *Lr, double *rho, double *a);
 
 double michel_wind_velocity(double r, double br, double omega, double mdot);
 void load_kappa_table(double kappa_tab[index_T][index_R]);
-double kappa_fit(double log10T6, double log10rho, double kappa_tab[index_T][index_R]);
+double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index_R]);
 
 
 int main()
@@ -58,37 +59,42 @@ int main()
     double rA = .1*Rsun;
     double vA = .1*michel_wind_velocity(Rwd,Bwd,Omega,Mdot); /* normalized by the Michel velocity */
     double dudxA = .5;
-    double TA = 1.0e5;
-    double LrA = 1.e38;
+    double TA = 3.0e5;
+    double LrA = 2.e38;
     
     /* calculate other parameters at rA */
     double BrA,rhoA,vphiA,BphiA,Fm,FB,Lang,etot;
     set_para_at_rA(rA,vA,dudxA,TA,LrA,&BrA,&rhoA,&vphiA,&BphiA,&Fm,&FB,&Lang,&etot);
     kappa = kappa_fit(log10(TA),log10(rhoA),kappa_tab);
-    fprintf(op,"%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",rA,vA,TA,BrA,BphiA,vphiA,LrA,rhoA,kappa);
+    fprintf(op,"%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",
+            rA,vA,TA,BrA,BphiA,vphiA,LrA,rhoA,kappa,sqrt(kB*TA/mu_mol/Mu));
     
     /* set radial coordinate */
     double r[rbin],dr;
     set_r_from_rA_to_rWD(rA,r);
     
     /* calculate the 1st step */
-    double T,vr,Br,Bphi,vphi,Lr,rho;
+    double T,vr,Br,Bphi,vphi,Lr,rho,a,denominator_of_dvrdr,numerator_of_dvrdr;
     dr = r[1]-r[0];
     calc_dTdr(TA,&T,dr,rA,rhoA,LrA,kappa);
     calc_dVrdr_1ststep(vA,&vr,dr,dudxA,vA,rA);
-    solve_constraint_eqs(r[1],rA,vA,vr,T,Fm,FB,Lang,etot,&Br,&Bphi,&vphi,&Lr,&rho);
+    solve_constraint_eqs(r[1],rA,vA,vr,T,Fm,FB,Lang,etot,&Br,&Bphi,&vphi,&Lr,&rho,&a);
     kappa = kappa_fit(log10(T),log10(rho),kappa_tab);
-    fprintf(op,"%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",r[1],vr,T,Br,Bphi,vphi,Lr,rho,kappa);
+    fprintf(op,"%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",
+            r[1],vr,T,Br,Bphi,vphi,Lr,rho,kappa,a);
 
+    
+    
     /* calculate the 2nd step and more */
     int i=1;
     while (i<rbin-1 && vr > 0.){
         dr = r[i+1]-r[i];
         calc_dTdr(T,&T,dr,r[i],rho,Lr,kappa);
-        calc_dVrdr_2ststep_and_more(vr,&vr,r[i],dr,rho,Br,Bphi,vphi,T,Lr,kappa);
-        solve_constraint_eqs(r[i+1],rA,vA,vr,T,Fm,FB,Lang,etot,&Br,&Bphi,&vphi,&Lr,&rho);
+        calc_dVrdr_2ststep_and_more(vr,r[i],dr,rho,Br,Bphi,vphi,T,Lr,kappa,&vr,&denominator_of_dvrdr,&numerator_of_dvrdr);
+        solve_constraint_eqs(r[i+1],rA,vA,vr,T,Fm,FB,Lang,etot,&Br,&Bphi,&vphi,&Lr,&rho,&a);
         kappa = kappa_fit(log10(T),log10(rho),kappa_tab);
-        fprintf(op,"%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",r[i+1],vr,T,Br,Bphi,vphi,Lr,rho,kappa);
+        fprintf(op,"%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",
+                r[i+1],vr,T,Br,Bphi,vphi,Lr,rho,kappa,a,denominator_of_dvrdr,numerator_of_dvrdr);
         i++;
     }
     
@@ -146,24 +152,27 @@ void calc_dVrdr_1ststep(double vrinput, double *vroutput, double dr, double dudx
 }
 
 
-void calc_dVrdr_2ststep_and_more(double vrinput, double *vroutput, double r, double dr, double rho, double Br, double Bphi, double vphi, double T, double Lr, double kappa)
+void calc_dVrdr_2ststep_and_more(double vrinput, double r, double dr, double rho, double Br, double Bphi, double vphi, double T, double Lr, double kappa,
+                                 double *vroutput, double *denominator_of_dvrdr, double *numerator_of_dvrdr)
 {
     double Ar = Br/sqrt(4.*M_PI*rho);
     double Aphi = Bphi/sqrt(4.*M_PI*rho);
     
-    double denominator_of_dvrdr = (vrinput*vrinput -kB*T/mu_mol/Mu - Aphi*Aphi*vrinput*vrinput/(vrinput*vrinput-Ar*Ar))*r/vrinput;
-    double dPdr_term = 3.*kappa*Lr/16./M_PI/arad/C/pow(T,3.)/r*(rho*kB/mu_mol/Mu+4./3.*arad*pow(T,3.)) + 2.*kB*T/mu_mol/Mu;
+    double denominator_of_dvrdr_tmp = (vrinput*vrinput -kB*T/mu_mol/Mu - Aphi*Aphi*vrinput*vrinput/(vrinput*vrinput-Ar*Ar))*r/vrinput;
+    double dPdr_term = 3.*kappa*Lr/16./M_PI/arad/C/pow(T,3.)/r*(rho*kB/mu_mol/Mu + 4./3.*arad*pow(T,3.)) + 2.*kB*T/mu_mol/Mu;
     double gravity_term = -G*Mwd/r;
     double centrifugal_force_term = vphi*vphi;
     double magnetic_term = 2.*vrinput*vphi*Ar*Aphi/(vrinput*vrinput-Ar*Ar);
-    double numerator_of_dvrdr = dPdr_term + gravity_term + centrifugal_force_term + magnetic_term;
+    double numerator_of_dvrdr_tmp = dPdr_term + gravity_term + centrifugal_force_term + magnetic_term;
     
-    *vroutput = vrinput + dr*numerator_of_dvrdr/denominator_of_dvrdr;
+    *vroutput = vrinput + dr*numerator_of_dvrdr_tmp/denominator_of_dvrdr_tmp;
+    *denominator_of_dvrdr = denominator_of_dvrdr_tmp;
+    *numerator_of_dvrdr = numerator_of_dvrdr_tmp;
 }
 
 
 void solve_constraint_eqs(double r, double rA, double vA, double vr, double T, double Fm, double FB, double Lang, double etot,
-                          double *Br, double *Bphi, double *vphi, double *Lr, double *rho)
+                          double *Br, double *Bphi, double *vphi, double *Lr, double *rho, double *a)
 {
     double Br_tmp = FB/r/r;
     double rho_tmp = Fm/vr/r/r;
@@ -171,6 +180,8 @@ void solve_constraint_eqs(double r, double rA, double vA, double vr, double T, d
     double x = r/rA;
     double vphi_tmp = rA*Omega*x*(1.-u)/(1.-x*x*u);
     double Bphi_tmp = -Br_tmp*rA*Omega/vA*x*(1.-x*x)/(1.-x*x*u);
+    double a_tmp = sqrt(kB*T/mu_mol/Mu);
+
     
     double h_tmp = 5./2.*kB*T/mu_mol/Mu + 4.*arad*pow(T,4.)/3./rho_tmp;
     double k_tmp = 0.5*(vr*vr+vphi_tmp*vphi_tmp);
@@ -181,6 +192,7 @@ void solve_constraint_eqs(double r, double rA, double vA, double vr, double T, d
     *vphi = vphi_tmp;
     *Lr = Lr_tmp;
     *rho = rho_tmp;
+    *a = a_tmp;
 }
 
 
