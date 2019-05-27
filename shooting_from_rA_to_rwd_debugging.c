@@ -18,13 +18,13 @@ const double Yr = 365.*24.*60.*60.;
 /* model parameters */
 const double mu_mol = 0.5;
 const double Mwd = 1.0*Msun;
-const double Rwd = 3.0e8;
-const double Bwd = 1.0e9;
-const double Omega = 0.1;
-const double Mdot = 1.0e-6*Msun/Yr;
+const double Rwd = 5.0e8;
+const double Bwd = 1.0e8;
+const double Omega = 0.05;
+const double Mdot = 3.0e-6*Msun/Yr;
 
 /* number of radial bin */
-const int rbin = 8176;
+const int rbin = 2048;
 
 /* optcaity table #46 */
 const int index_T=58;
@@ -56,11 +56,11 @@ int main()
     load_kappa_table(kappa_tab);
     
     /* trial parameters at rA */
-    double rA = .2*Rsun;
-    double vA = .05*michel_wind_velocity(Rwd,Bwd,Omega,Mdot); /* normalized by the Michel velocity */
-    double dudxA = .5;
-    double TA = 3.0e5;
-    double LrA = 2.e38;
+    double rA = .1*Rsun;
+    double vA = 1.0e9;//.5*michel_wind_velocity(Rwd,Bwd,Omega,Mdot); /* normalized by the Michel velocity */
+    double dudxA = 0.5;
+    double TA = 2.0e5;
+    double LrA = 1.2e38;
     
     /* calculate other parameters at rA */
     double BrA,rhoA,vphiA,BphiA,Fm,FB,Lang,etot;
