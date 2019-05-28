@@ -56,13 +56,11 @@ int main()
     load_kappa_table(kappa_tab);
     
     /* trial parameters at rA */
-    //double rA = .11717002*Rsun;
-    double rA = .14755*Rsun;
+    double rA = .11717002*Rsun;
     double vA = .15*michel_wind_velocity(Rwd,Bwd,Omega,Mdot); /* normalized by the Michel velocity */
-    //double dudxA = 1.275;
-    double dudxA = 1.0;
+    double dudxA = 1.275;
     double TA = 3.e5;
-    double LrA = 0.;//2.e38;
+    double LrA = 2.e38;
     
     /* calculate other parameters at rA */
     double BrA,rhoA,vphiA,BphiA,Fm,FB,Lang,etot;
@@ -177,16 +175,16 @@ void solve_constraint_eqs(double r, double rA, double vA, double vr, double T, d
 {
     double Br_tmp = FB/r/r;
     double rho_tmp = Fm/vr/r/r;
+    
     double u = vr/vA;
     double x = r/rA;
     double vphi_tmp = rA*Omega*x*(1.-u)/(1.-x*x*u);
     double Bphi_tmp = -Br_tmp*rA*Omega/vA*x*(1.-x*x)/(1.-x*x*u);
     double a_tmp = sqrt(kB*T/mu_mol/Mu);
-
     
     double h_tmp = 5./2.*kB*T/mu_mol/Mu + 4.*arad*pow(T,4.)/3./rho_tmp;
     double k_tmp = 0.5*(vr*vr+vphi_tmp*vphi_tmp);
-    double Lr_tmp = 0.;//4.*M_PI*Fm*(etot-k_tmp-h_tmp+G*Mwd/r+r*Omega*vphi_tmp-Lang*Omega);
+    double Lr_tmp = 4.*M_PI*Fm*(etot-k_tmp-h_tmp+G*Mwd/r+r*Omega*vphi_tmp-Lang*Omega);
     
     *Br = Br_tmp;
     *Bphi = Bphi_tmp;

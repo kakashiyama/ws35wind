@@ -15,6 +15,7 @@ int main()
     load_kappa_table(kappa_tab);
     double log10T=5.31,log10rho=-5.;
     kappa = kappa_fit(log10T,log10rho,kappa_tab);
+
     printf("%le \n",kappa);
 
     return 0;
@@ -48,7 +49,7 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     index_T_fit = i;
     if (index_T_fit == 1)
         index_T_fit = 2;
-    
+
     j=1;
     while(kappa_tab[0][j]<log10R && j<index_R-1)
         j++;
@@ -63,3 +64,4 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     
     return pow(10.,log10kappa);
 }
+
