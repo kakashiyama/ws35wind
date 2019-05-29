@@ -24,7 +24,7 @@ const double Omega = 0.1;
 const double Mdot = 3.0e-6*Msun/Yr;
 
 /* number of radial bin */
-const int rbin = 128;
+const int rbin = 10000;
 
 /* optcaity table #46 */
 const int index_T=58;
@@ -47,60 +47,88 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
 
 int main()
 {
-    /* Open file */
-    FILE *op;
-    op = fopen("test.dat","w");
-    
     /* load kappa table */
-    double kappa_tab[index_T][index_R],kappa;
+    double kappa_tab[index_T][index_R],kappa[rbin];
     load_kappa_table(kappa_tab);
     
-    /* trial parameters at rA */
-    //double rA = .11717002*Rsun;
-    double rA = .14755*Rsun;
+    /* fixed parameters */
     double vA = .15*michel_wind_velocity(Rwd,Bwd,Omega,Mdot); /* normalized by the Michel velocity */
-    //double dudxA = 1.275;
     double dudxA = 1.0;
     double TA = 3.e5;
-    double LrA = 0.;//2.e38;
+    double LrA = 2.e38;
     
-    /* calculate other parameters at rA */
+    /* to-be-calculated parameters */
     double BrA,rhoA,vphiA,BphiA,Fm,FB,Lang,etot;
-    set_para_at_rA(rA,vA,dudxA,TA,LrA,&BrA,&rhoA,&vphiA,&BphiA,&Fm,&FB,&Lang,&etot);
-    printf("etot = %12.3e \n",etot);
-    kappa = kappa_fit(log10(TA),log10(rhoA),kappa_tab);
-    fprintf(op,"%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",
-            rA,vA,TA,BrA,BphiA,vphiA,LrA,rhoA,kappa,sqrt(kB*TA/mu_mol/Mu));
-    
-    /* set radial coordinate */
     double r[rbin],dr;
-    set_r_from_rA_to_rWD(rA,r);
+    double T[rbin],vr[rbin],Br[rbin],Bphi[rbin],vphi[rbin],Lr[rbin],rho[rbin],a,denominator_of_dvrdr[rbin],numerator_of_dvrdr[rbin];
+
     
-    /* calculate the 1st step */
-    double T,vr,Br,Bphi,vphi,Lr,rho,a,denominator_of_dvrdr,numerator_of_dvrdr;
-    dr = r[1]-r[0];
-    calc_dTdr(TA,&T,dr,rA,rhoA,LrA,kappa);
-    calc_dVrdr_1ststep(vA,&vr,dr,dudxA,vA,rA);
-    solve_constraint_eqs(r[1],rA,vA,vr,T,Fm,FB,Lang,etot,&Br,&Bphi,&vphi,&Lr,&rho,&a);
-    kappa = kappa_fit(log10(T),log10(rho),kappa_tab);
-    fprintf(op,"%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",
-            r[1],vr,T,Br,Bphi,vphi,Lr,rho,kappa,a);
+    /* trial parameters at rA */
+    double rAmax = 2.*Rsun;
+    double rAmin = 0.01*Rsun;
+    double rA = .5*(rAmax+rAmin);
+    int max_trial = 50,j=0;
     
-    /* calculate the 2nd step and more */
-    int i=1;
-    while (i<rbin-1 && vr > 0.){
-        dr = r[i+1]-r[i];
-        calc_dTdr(T,&T,dr,r[i],rho,Lr,kappa);
-        calc_dVrdr_2ststep_and_more(vr,r[i],dr,rho,Br,Bphi,vphi,T,Lr,kappa,&vr,&denominator_of_dvrdr,&numerator_of_dvrdr);
-        solve_constraint_eqs(r[i+1],rA,vA,vr,T,Fm,FB,Lang,etot,&Br,&Bphi,&vphi,&Lr,&rho,&a);
-        kappa = kappa_fit(log10(T),log10(rho),kappa_tab);
-        fprintf(op,"%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",
-                r[i+1],vr,T,Br,Bphi,vphi,Lr,rho,kappa,a,denominator_of_dvrdr,numerator_of_dvrdr);
-        i++;
+    while (j<max_trial){
+        printf("%d: rA = %lf \n",j,rA/Rsun);
+        
+        /* set radial coordinate */
+        set_r_from_rA_to_rWD(rA,r);
+        
+        /* calculate other parameters at rA */
+        set_para_at_rA(rA,vA,dudxA,TA,LrA,&Br[0],&rho[0],&vphi[0],&Bphi[0],&Fm,&FB,&Lang,&etot);
+        vr[0] = vA;
+        T[0] = TA;
+        Lr[0] = LrA;
+        kappa[0] = kappa_fit(log10(T[0]),log10(rho[0]),kappa_tab);
+        
+        /* calculate the 1st step */
+        dr = r[1]-r[0];
+        calc_dTdr(T[0],&T[1],dr,r[0],rho[0],Lr[0],kappa[0]);
+        calc_dVrdr_1ststep(vr[0],&vr[1],dr,dudxA,vA,rA);
+        solve_constraint_eqs(r[1],rA,vA,vr[1],T[1],Fm,FB,Lang,etot,&Br[1],&Bphi[1],&vphi[1],&Lr[1],&rho[1],&a);
+        kappa[1] = kappa_fit(log10(T[1]),log10(rho[1]),kappa_tab);
+        
+        /* calculate the 2nd step and more */
+        int i=1;
+        while (i<rbin-1 && vr[i] > 0.){
+            dr = r[i+1]-r[i];
+            calc_dTdr(T[i],&T[i+1],dr,r[i],rho[i],Lr[i],kappa[i]);
+            calc_dVrdr_2ststep_and_more(vr[i],r[i],dr,rho[i],Br[i],Bphi[i],vphi[i],T[i],Lr[i],kappa[i],&vr[i+1],&denominator_of_dvrdr[i+1],&numerator_of_dvrdr[i+1]);
+            solve_constraint_eqs(r[i+1],rA,vA,vr[i+1],T[i+1],Fm,FB,Lang,etot,&Br[i+1],&Bphi[i+1],&vphi[i+1],&Lr[i+1],&rho[i+1],&a);
+            kappa[i+1] = kappa_fit(log10(T[i+1]),log10(rho[i+1]),kappa_tab);
+            i++;
+        }
+        
+        
+        if (i >= rbin-1) {
+            if (numerator_of_dvrdr[i]/denominator_of_dvrdr[i] > 0.){
+                break;
+            } else {
+                rAmin = rA;
+                rA = 0.5*(rA+rAmax);
+            }
+        } else {
+            rAmax = rA;
+            rA = 0.5*(rA+rAmin);
+        }
+        
+        j++;
+    
     }
     
-    /* close file */
+    FILE *op;
+    op = fopen("test.dat","w");
+    for (j=0; j<rbin; j++) {
+        fprintf(op,"%lf %lf \n",r[j],vr[j]);
+    }
     fclose(op);
+    
+    if (j<max_trial){
+        printf("find a solution \n");
+    } else {
+        printf("could not find a solution\n");
+    }
     
     return 0;
 }
