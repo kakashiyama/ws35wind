@@ -26,6 +26,9 @@ const double Mdot = 3.0e-6*Msun/Yr;
 /* number of radial bin */
 const int rbin = 10000;
 
+/* shooting trial number */
+const int max_trial = 50;
+
 /* optcaity table #46 */
 const int index_T=58;
 const int index_R=20;
@@ -67,7 +70,7 @@ int main()
     double rAmax = 2.*Rsun;
     double rAmin = 0.01*Rsun;
     double rA = .5*(rAmax+rAmin);
-    int max_trial = 50,j=0;
+    int j=0;
     
     while (j<max_trial){
         printf("%d: rA = %lf \n",j,rA/Rsun);
