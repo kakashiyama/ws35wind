@@ -24,7 +24,7 @@ const double Omega = 0.1;
 const double Mdot = 3.0e-6*Msun/Yr;
 
 /* number of radial bin */
-const int rbin = 10000;
+const int rbin = 100000;
 
 /* shooting trial number */
 const int max_trial = 50;
@@ -60,20 +60,29 @@ int main()
     double TA = 3.e5;
     double LrA = 2.e38;
     
-    /* to-be-calculated parameters */
-    double BrA,rhoA,vphiA,BphiA,Fm,FB,Lang,etot;
-    double r[rbin],dr;
-    double T[rbin],vr[rbin],Br[rbin],Bphi[rbin],vphi[rbin],Lr[rbin],rho[rbin],a,denominator_of_dvrdr[rbin],numerator_of_dvrdr[rbin];
-
+    /* to-be-calculated qunatities */
+    double BrA,rhoA,vphiA,BphiA,Fm,FB,Lang,etot,dr,a;
+    double *r,*vr,*T,*Br,*Bphi,*vphi,*Lr,*rho,*denominator_of_dvrdr,*numerator_of_dvrdr;
+    r = (double *)malloc(rbin * sizeof(double));
+    vr = (double *)malloc(rbin * sizeof(double));
+    T = (double *)malloc(rbin * sizeof(double));
+    Br = (double *)malloc(rbin * sizeof(double));
+    Bphi = (double *)malloc(rbin * sizeof(double));
+    vphi = (double *)malloc(rbin * sizeof(double));
+    Lr = (double *)malloc(rbin * sizeof(double));
+    rho = (double *)malloc(rbin * sizeof(double));
+    denominator_of_dvrdr = (double *)malloc(rbin * sizeof(double));
+    numerator_of_dvrdr = (double *)malloc(rbin * sizeof(double));
     
-    /* trial parameters at rA */
+    
+    /* initial trial rA */
     double rAmax = 2.*Rsun;
     double rAmin = 0.01*Rsun;
     double rA = .5*(rAmax+rAmin);
     int j=0;
     
     while (j<max_trial){
-        printf("%d: rA = %lf \n",j,rA/Rsun);
+        printf("%d: rA = %lf \n",j,rA);
         
         /* set radial coordinate */
         set_r_from_rA_to_rWD(rA,r);
@@ -104,6 +113,7 @@ int main()
         }
         
         
+        /* set next trial rA */
         if (i >= rbin-1) {
             if (numerator_of_dvrdr[i]/denominator_of_dvrdr[i] > 0.){
                 break;
@@ -115,23 +125,34 @@ int main()
             rAmax = rA;
             rA = 0.5*(rA+rAmin);
         }
-        
         j++;
     
     }
-    
-    FILE *op;
-    op = fopen("test.dat","w");
-    for (j=0; j<rbin; j++) {
-        fprintf(op,"%lf %lf \n",r[j],vr[j]);
-    }
-    fclose(op);
     
     if (j<max_trial){
         printf("find a solution \n");
     } else {
         printf("could not find a solution\n");
     }
+    
+    FILE *op;
+    op = fopen("test.dat","w");
+    for (j=0; j<rbin; j++) {
+        fprintf(op,"%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",
+                r[j],vr[j],T[j],Br[j],Bphi[j],vphi[j],Lr[j],rho[j],kappa[j]);
+    }
+    fclose(op);
+    
+    free(r);
+    free(vr);
+    free(T);
+    free(Br);
+    free(Bphi);
+    free(vphi);
+    free(Lr);
+    free(rho);
+    free(denominator_of_dvrdr);
+    free(numerator_of_dvrdr);
     
     return 0;
 }
@@ -217,7 +238,7 @@ void solve_constraint_eqs(double r, double rA, double vA, double vr, double T, d
     
     double h_tmp = 5./2.*kB*T/mu_mol/Mu + 4.*arad*pow(T,4.)/3./rho_tmp;
     double k_tmp = 0.5*(vr*vr+vphi_tmp*vphi_tmp);
-    double Lr_tmp = 0.;//4.*M_PI*Fm*(etot-k_tmp-h_tmp+G*Mwd/r+r*Omega*vphi_tmp-Lang*Omega);
+    double Lr_tmp = 4.*M_PI*Fm*(etot-k_tmp-h_tmp+G*Mwd/r+r*Omega*vphi_tmp-Lang*Omega);
     
     *Br = Br_tmp;
     *Bphi = Bphi_tmp;
