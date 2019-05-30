@@ -17,10 +17,10 @@ const double Yr = 365.*24.*60.*60.;
 
 /* model parameters */
 const double mu_mol = 0.5;
-const double Mwd = 1.*Msun;
-const double Rwd = 3.0e8;
-const double Bwd = 3.0e8;
-const double Omega = 0.1;
+const double Mwd = 1.3*Msun;
+const double Rwd = 1.0e8;
+const double Bwd = 1.0e9;
+const double Omega = 0.01;
 const double Mdot = 3.0e-6*Msun/Yr;
 
 /* number of radial bin */
@@ -43,9 +43,10 @@ void calc_dVrdr_2ststep_and_more(double vrinput, double r, double dr, double rho
 void solve_constraint_eqs(double r, double rA, double vA, double vr, double T, double Fm, double FB, double Lang, double etot,
                           double *Br, double *Bphi, double *vphi, double *Lr, double *rho, double *a);
 
-double michel_wind_velocity(double r, double br, double omega, double mdot);
 void load_kappa_table(double kappa_tab[index_T][index_R]);
 double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index_R]);
+
+double michel_wind_velocity(double r, double br, double omega, double mdot);
 
 
 int main()
@@ -55,8 +56,8 @@ int main()
     load_kappa_table(kappa_tab);
     
     /* fixed parameters */
-    double vA = .15*michel_wind_velocity(Rwd,Bwd,Omega,Mdot); /* normalized by the Michel velocity */
-    double dudxA = 1.0;
+    double vA;
+    double dudxA = 2.0;
     double TA = 3.e5;
     double LrA = 2.e38;
     
@@ -76,9 +77,10 @@ int main()
     
     
     /* initial trial rA */
-    double rAmax = 2.*Rsun;
+    double rAmax = 10.*Rsun;
     double rAmin = 0.01*Rsun;
     double rA = .5*(rAmax+rAmin);
+    vA = pow(Bwd,2.)*pow(Rwd,4.)/Mdot/rA/rA;
     int j=0;
     
     while (j<max_trial){
@@ -125,6 +127,7 @@ int main()
             rAmax = rA;
             rA = 0.5*(rA+rAmin);
         }
+        vA = pow(Bwd,2.)*pow(Rwd,4.)/Mdot/rA/rA;
         j++;
     
     }
@@ -249,12 +252,6 @@ void solve_constraint_eqs(double r, double rA, double vA, double vr, double T, d
 }
 
 
-double michel_wind_velocity(double r, double br, double omega, double mdot)
-{
-    return pow(pow(r,4.)*pow(br,2.)*pow(omega,2.)/mdot,1./3.);
-}
-
-
 void load_kappa_table(double kappa_tab[index_T][index_R])
 {
     int i,j;
@@ -297,3 +294,10 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     
     return pow(10.,log10kappa);
 }
+
+
+double michel_wind_velocity(double r, double br, double omega, double mdot)
+{
+    return pow(pow(r,4.)*pow(br,2.)*pow(omega,2.)/mdot,1./3.);
+}
+
