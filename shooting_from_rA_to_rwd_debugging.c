@@ -107,8 +107,8 @@ int main()
         
         /* calculate the 2nd step and more */
         int i=1;
-        //while (i<rbin-1 && vr[i] > 0.){
-        while (i<rbin-1 && (denominator_of_dvrdr[i] > 0. && numerator_of_dvrdr[i] > 0.)) {
+        while (i<rbin-1 && vr[i] > 0.){
+        //while (i<rbin-1 && denominator_of_dvrdr[i] > 0. && numerator_of_dvrdr[i] > 0.) {
             dr = r[i+1]-r[i];
             calc_dTdr(T[i],&T[i+1],dr,r[i],rho[i],Lr[i],kappa[i]);
             calc_dVrdr_2ststep_and_more(vr[i],r[i],dr,rho[i],Br[i],Bphi[i],vphi[i],T[i],Lr[i],kappa[i],&vr[i+1],&denominator_of_dvrdr[i+1],&numerator_of_dvrdr[i+1]);
@@ -119,7 +119,7 @@ int main()
         
         
         /* set next trial rA */
-        /*
+        
         if (i >= rbin-1) {
             if (numerator_of_dvrdr[i]/denominator_of_dvrdr[i] > 0.){
                 break;
@@ -133,9 +133,11 @@ int main()
             rA = exp(.5*(log(rA)+ln_rAmin));
             printf("Down!\n");
         }
-        */
         
-        if (numerator_of_dvrdr[i] <= 0.) {
+        /*
+        if (numerator_of_dvrdr[i] <= 0. && denominator_of_dvrdr[i] <= 0.){
+            break;
+        } else if (numerator_of_dvrdr[i] <= 0.) {
             ln_rAmin = log(rA);
             rA = exp(.5*(log(rA)+ln_rAmax));
             printf("Up!\n");
@@ -146,7 +148,7 @@ int main()
         } else if (i >= rbin-1) {
             break;
         }
-        
+        */
         vA = pow(Bwd,2.)*pow(Rwd,4.)/Mdot/rA/rA;
         
         j++;
