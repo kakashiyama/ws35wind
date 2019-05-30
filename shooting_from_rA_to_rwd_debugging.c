@@ -28,7 +28,7 @@ const int rbin = 1000000;
 
 /* shooting trial number */
 const int max_trial = 50;
-const int max_trial_2 = 1000;
+const int max_trial_2 = 2;
 
 /* optcaity table #46 */
 const int index_T=58;
@@ -158,7 +158,7 @@ int main()
     
     
     /* 2nd trial */
-    double eps_rA = 1.0e-6*rA;
+    double eps_rA = 1.0e-8*rA;
     double rA_max = rA;
     j=0;
     while (j<max_trial_2){
@@ -185,7 +185,7 @@ int main()
         
         /* calculate the 2nd step and more */
         int i=1;
-        while (i<rbin-1 && denominator_of_dvrdr[i] > 0. && numerator_of_dvrdr[i] > 0.) {
+        while (i<rbin-1 /*&& denominator_of_dvrdr[i] > 0. && numerator_of_dvrdr[i] > 0.*/) {
             dr = r[i+1]-r[i];
             calc_dTdr(T[i],&T[i+1],dr,r[i],rho[i],Lr[i],kappa[i]);
             calc_dVrdr_2ststep_and_more(vr[i],r[i],dr,rho[i],Br[i],Bphi[i],vphi[i],T[i],Lr[i],kappa[i],&vr[i+1],&denominator_of_dvrdr[i+1],&numerator_of_dvrdr[i+1]);
@@ -203,8 +203,9 @@ int main()
             rA -= eps_rA;
             printf("Down!\n");
         } else {
+            rA -= eps_rA;
             printf("Give Up!\n");
-            break;
+            //break;
         }
         vA = pow(Bwd,2.)*pow(Rwd,4.)/Mdot/rA/rA;
         
@@ -214,10 +215,10 @@ int main()
     
     op = fopen("test2.dat","w");
     for (j=0; j<rbin; j++) {
-        if (j % 100 == 0){
+        //if (j % 100 == 0){
             fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
                     r[j],vr[j],T[j],Br[j],Bphi[j],vphi[j],Lr[j],rho[j],kappa[j],denominator_of_dvrdr[j],numerator_of_dvrdr[j]);
-        }
+        //}
     }
     fclose(op);
     
@@ -369,7 +370,7 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     double kappa_Tdirect_max = (kappa_tab[index_T_fit][index_R_fit]-kappa_tab[index_T_fit][index_R_fit-1])/(kappa_tab[0][index_R_fit]-kappa_tab[0][index_R_fit-1])*(log10R-kappa_tab[0][index_R_fit-1])+kappa_tab[index_T_fit][index_R_fit-1];
     double log10kappa = (kappa_Tdirect_max-kappa_Tdirect_min)/(kappa_tab[index_T_fit][0]-kappa_tab[index_T_fit-1][0])*(log10T-kappa_tab[index_T_fit-1][0])+kappa_Tdirect_min;
     
-    return pow(10.,log10kappa);
+    return 0.2;//pow(10.,log10kappa);
 }
 
 
