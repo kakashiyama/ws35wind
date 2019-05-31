@@ -40,8 +40,10 @@ void trial_2nd_stage(double dudxA, double TA, double LrA, double rA, double drA)
 void set_r_from_rA_to_rWD(double rA, double r[]);
 void set_para_at_rA(double rA, double dudxA, double TA, double LrA,
                     double *vA, double *BrA, double *rhoA, double *vphiA, double *BphiA, double *Fm, double *FB, double *Lang, double *etot);
-void calc_dTdr(double Tinput, double *Toutput, double dr, double dTdr);
-void calc_dVrdr_1ststep(double vrinput, double *vroutput, double dr, double dudxA, double vA, double rA);
+void calc_dTdr(double Tinput, double dr, double dTdr,
+               double *Toutput);
+void calc_dVrdr_1ststep(double vrinput, double dr, double dudxA, double vA, double rA,
+                        double *vroutput);
 void calc_dVrdr_2ndstep_and_more(double vrinput, double r, double dr, double rho, double Br, double Bphi, double vphi, double T, double Lr, double kappa,
                                  double *vroutput, double *denominator_of_dvrdr, double *numerator_of_dvrdr);
 void solve_constraint_eqs(double r, double vr, double T,
@@ -120,8 +122,8 @@ void trial_1st_stage(double dudxA, double TA, double LrA, double ln_rAmax, doubl
         dr = r[1]-r[0];
         Rfld = solve_Rfld(r[0],T[0],Lr[0]);
         dTdr = solve_dTdr(rho[0],kappa[0],T[0],Rfld);
-        calc_dTdr(T[0],&T[1],dr,dTdr);
-        calc_dVrdr_1ststep(vr[0],&vr[1],dr,dudxA,vA,rA);
+        calc_dTdr(T[0],dr,dTdr,&T[1]);
+        calc_dVrdr_1ststep(vr[0],dr,dudxA,vA,rA,&vr[1]);
         denominator_of_dvrdr[1] = dudxA*vA*vA;
         numerator_of_dvrdr[1] = vA*rA;
         solve_constraint_eqs(r[1],vr[1],T[1],rA,vA,Fm,FB,Lang,etot,&Br[1],&Bphi[1],&vphi[1],&Lr[1],&rho[1]);
@@ -133,7 +135,7 @@ void trial_1st_stage(double dudxA, double TA, double LrA, double ln_rAmax, doubl
             dr = r[i+1]-r[i];
             Rfld = solve_Rfld(r[i],T[i],Lr[i]);
             dTdr = solve_dTdr(rho[i],kappa[i],T[i],Rfld);
-            calc_dTdr(T[i],&T[i+1],dr,dTdr);
+            calc_dTdr(T[i],dr,dTdr,&T[i+1]);
             calc_dVrdr_2ndstep_and_more(vr[i],r[i],dr,rho[i],Br[i],Bphi[i],vphi[i],T[i],Lr[i],kappa[i],&vr[i+1],&denominator_of_dvrdr[i+1],&numerator_of_dvrdr[i+1]);
             solve_constraint_eqs(r[i+1],vr[i+1],T[i+1],rA,vA,Fm,FB,Lang,etot,&Br[i+1],&Bphi[i+1],&vphi[i+1],&Lr[i+1],&rho[i+1]);
             kappa[i+1] = kappa_fit(log10(T[i+1]),log10(rho[i+1]),kappa_tab);
@@ -192,15 +194,6 @@ void trial_1st_stage(double dudxA, double TA, double LrA, double ln_rAmax, doubl
     free(numerator_of_dvrdr);
 }
 
-void set_r_from_rA_to_rWD(double rA, double r[])
-{
-    double del_ln_r = log(Rwd/rA)/(double)(rbin-1);
-    int i;
-    for (i=0; i<rbin; i++) {
-        r[i] = rA*exp(del_ln_r*(double)i);
-    }
-}
-
 
 void trial_2nd_stage(double dudxA, double TA, double LrA, double rA, double drA)
 {
@@ -243,8 +236,8 @@ void trial_2nd_stage(double dudxA, double TA, double LrA, double rA, double drA)
         dr = r[1]-r[0];
         Rfld = solve_Rfld(r[0],T[0],Lr[0]);
         dTdr = solve_dTdr(rho[0],kappa[0],T[0],Rfld);
-        calc_dTdr(T[0],&T[1],dr,dTdr);
-        calc_dVrdr_1ststep(vr[0],&vr[1],dr,dudxA,vA,rA);
+        calc_dTdr(T[0],dr,dTdr,&T[1]);
+        calc_dVrdr_1ststep(vr[0],dr,dudxA,vA,rA,&vr[1]);
         denominator_of_dvrdr[1] = dudxA*vA*vA;
         numerator_of_dvrdr[1] = vA*rA;
         solve_constraint_eqs(r[1],vr[1],T[1],rA,vA,Fm,FB,Lang,etot,&Br[1],&Bphi[1],&vphi[1],&Lr[1],&rho[1]);
@@ -256,7 +249,7 @@ void trial_2nd_stage(double dudxA, double TA, double LrA, double rA, double drA)
             dr = r[i+1]-r[i];
             Rfld = solve_Rfld(r[i],T[i],Lr[i]);
             dTdr = solve_dTdr(rho[i],kappa[i],T[i],Rfld);
-            calc_dTdr(T[i],&T[i+1],dr,dTdr);
+            calc_dTdr(T[i],dr,dTdr,&T[i+1]);
             calc_dVrdr_2ndstep_and_more(vr[i],r[i],dr,rho[i],Br[i],Bphi[i],vphi[i],T[i],Lr[i],kappa[i],&vr[i+1],&denominator_of_dvrdr[i+1],&numerator_of_dvrdr[i+1]);
             solve_constraint_eqs(r[i+1],vr[i+1],T[i+1],rA,vA,Fm,FB,Lang,etot,&Br[i+1],&Bphi[i+1],&vphi[i+1],&Lr[i+1],&rho[i+1]);
             kappa[i+1] = kappa_fit(log10(T[i+1]),log10(rho[i+1]),kappa_tab);
@@ -306,7 +299,7 @@ void trial_2nd_stage(double dudxA, double TA, double LrA, double rA, double drA)
 void set_para_at_rA(double rA, double dudxA, double TA, double LrA,
                     double *vA, double *BrA, double *rhoA, double *vphiA, double *BphiA, double *Fm, double *FB, double *Lang, double *etot)
 {
-    double vA_tmp = pow(Bwd,2.)*pow(Rwd,4.)/Mdot/rA/rA;
+    double vA_tmp = pow(Bwd,2.)*pow(Rwd,4.)/Mdot/pow(rA,2.0);
     double BrA_tmp = pow(rA/Rwd,-2.0)*Bwd;
     double rhoA_tmp = Mdot/4./M_PI/vA_tmp/pow(rA,2.0);
     double vphiA_tmp = rA*Omega*dudxA/(2.+ dudxA);
@@ -331,13 +324,25 @@ void set_para_at_rA(double rA, double dudxA, double TA, double LrA,
 }
 
 
-void calc_dTdr(double Tinput, double *Toutput, double dr, double dTdr)
+void set_r_from_rA_to_rWD(double rA, double r[])
+{
+    double del_ln_r = log(Rwd/rA)/(double)(rbin-1);
+    int i;
+    for (i=0; i<rbin; i++) {
+        r[i] = rA*exp(del_ln_r*(double)i);
+    }
+}
+
+
+void calc_dTdr(double Tinput, double dr, double dTdr,
+               double *Toutput)
 {
     *Toutput = Tinput + dr*dTdr;
 }
 
 
-void calc_dVrdr_1ststep(double vrinput, double *vroutput, double dr, double dudxA, double vA, double rA)
+void calc_dVrdr_1ststep(double vrinput, double dr, double dudxA, double vA, double rA,
+                        double *vroutput)
 {
     *vroutput = vrinput + dr*dudxA*(vA/rA);
 }
