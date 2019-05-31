@@ -181,7 +181,7 @@ int main()
         
         /* calculate the 2nd step and more */
         int i=1;
-        while (i<rbin-1 && denominator_of_dvrdr[i] > 0. && numerator_of_dvrdr[i] > 0.) {
+        while (i<rbin-1 && denominator_of_dvrdr[i]*numerator_of_dvrdr[i] > 0.) {
             dr = r[i+1]-r[i];
             calc_dTdr(T[i],&T[i+1],dr,r[i],rho[i],Lr[i],kappa[i]);
             calc_dVrdr_2ststep_and_more(vr[i],r[i],dr,rho[i],Br[i],Bphi[i],vphi[i],T[i],Lr[i],kappa[i],&vr[i+1],&denominator_of_dvrdr[i+1],&numerator_of_dvrdr[i+1]);
@@ -192,7 +192,7 @@ int main()
         
         /* set next trial rA */
         if (denominator_of_dvrdr[i]*numerator_of_dvrdr[i]>0.){
-            printf("find a solution!\n");
+            printf("find a solution \n");
             break;
         } else if (denominator_of_dvrdr[i] <=0.) {
             rA -= drA;
@@ -365,7 +365,7 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     double kappa_Tdirect_max = (kappa_tab[index_T_fit][index_R_fit]-kappa_tab[index_T_fit][index_R_fit-1])/(kappa_tab[0][index_R_fit]-kappa_tab[0][index_R_fit-1])*(log10R-kappa_tab[0][index_R_fit-1])+kappa_tab[index_T_fit][index_R_fit-1];
     double log10kappa = (kappa_Tdirect_max-kappa_Tdirect_min)/(kappa_tab[index_T_fit][0]-kappa_tab[index_T_fit-1][0])*(log10T-kappa_tab[index_T_fit-1][0])+kappa_Tdirect_min;
     
-    return pow(10.,log10kappa);
+    return 0.2;//pow(10.,log10kappa);
 }
 
 
