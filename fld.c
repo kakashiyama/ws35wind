@@ -35,6 +35,7 @@ double calc_Df(double R)
 
 double find_Rfld(double r, double T, double Lr)
 {
+    /* analytic solution of Rfld for given r, T, and Lr */
     double s = Lr/(4.*M_PI*pow(r,2.)*arad*pow(T,4.)*C);
     
     return (3.*s-2+sqrt(4.+12.*s-15.*s*s))/2./(1.-s);
