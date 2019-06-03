@@ -27,17 +27,16 @@ const double Mdot = 3.0e-6*Msun/Yr;
 const int rbin = 1000000;
 
 /* shooting trial number */
-const int max_1sttrial = 50;
+const int max_1sttrial = 1;
 const int max_2ndtrial = 50;
 
 /* optcaity table #46 */
 const int index_T=71;
 const int index_R=20;
 
-void trial_1st_stage(double dudxA, double TA, double LrA, double ln_rAmax, double ln_rAmin, double *rA_1st, double *drA_1st);
-void trial_2nd_stage(double dudxA, double TA, double LrA, double rA, double drA);
+void trial_1st_stage(double rA, double rmax, double TA, double LrA, double ln_dudxAmax, double ln_dudxAmin, double *dudxA_1st, double *ddudxA_1st);
 
-void set_r_from_rA_to_rWD(double rA, double r[]);
+void set_r_from_rA_to_infty(double rA, double rmax, double r[]);
 void set_para_at_rA(double rA, double dudxA, double TA, double LrA,
                     double *vA, double *BrA, double *rhoA, double *vphiA, double *BphiA, double *Fm, double *FB, double *Lang, double *etot);
 void calc_dTdr(double Tinput, double dr, double dTdr,
@@ -61,32 +60,30 @@ double michel_wind_velocity(double r, double br, double omega, double mdot);
 int main()
 {
     /* input parameters */
-    double dudxA = 3.0;
+    double rA = 8185856364.370256;
+    double rmax = rA*1000.;
     double TA = 3.e5;
     double LrA = 2.e38;
     
     /* trial 1st stage */
-    double ln_rAmax = log(10.*Rsun);
-    double ln_rAmin = log(0.01*Rsun);
-    double rA,drA;
-    trial_1st_stage(dudxA,TA,LrA,ln_rAmax,ln_rAmin,&rA,&drA);
-
-    /* trial 2nd stage */
-    trial_2nd_stage(dudxA,TA,LrA,rA,drA);
+    double ln_dudxAmax = log(3.);
+    double ln_dudxAmin = log(3.);
+    double dudxA,ddudxA;
+    trial_1st_stage(rA,rmax,TA,LrA,ln_dudxAmax,ln_dudxAmin,&dudxA,&ddudxA);
     
     return 0;
 }
 
 
-void trial_1st_stage(double dudxA, double TA, double LrA, double ln_rAmax, double ln_rAmin, double *rA_1st, double *drA_1st)
+void trial_1st_stage(double rA, double rmax, double TA, double LrA, double ln_dudxAmax, double ln_dudxAmin, double *dudxA_1st, double *ddudxA_1st)
 {
     /* initial guess */
-    double rA = exp(.5*(ln_rAmax+ln_rAmin));
+    double dudxA = exp(.5*(ln_dudxAmax+ln_dudxAmin));
     
     /* to-be-calculated qunatities */
     double vA,BrA,rhoA,vphiA,BphiA; /* at rA */
     double Fm,FB,Lang,etot; /* conserved quantities */
-    double dr,drA,Rfld,dTdr;
+    double dr,ddudxA,Rfld,dTdr;
     double *r,*vr,*T,*Br,*Bphi,*vphi,*Lr,*rho,*kappa,*denominator_of_dvrdr,*numerator_of_dvrdr;
     r = (double *)malloc(rbin * sizeof(double));
     vr = (double *)malloc(rbin * sizeof(double));
@@ -106,10 +103,10 @@ void trial_1st_stage(double dudxA, double TA, double LrA, double ln_rAmax, doubl
     
     int j=0;
     while (j<max_1sttrial){
-        printf("1st trial No. %d: rA = %lf cm \n",j,rA);
+        printf("1st trial No. %d: dudxA = %lf \n",j,dudxA);
         
         /* set radial coordinate */
-        set_r_from_rA_to_rWD(rA,r);
+        set_r_from_rA_to_infty(rA,rmax,r);
         
         /* calculate other parameters at rA */
         set_para_at_rA(rA,dudxA,TA,LrA,&vA,&Br[0],&rho[0],&vphi[0],&Bphi[0],&Fm,&FB,&Lang,&etot);
@@ -143,21 +140,21 @@ void trial_1st_stage(double dudxA, double TA, double LrA, double ln_rAmax, doubl
         }
         
         /* set next trial rA */
-        if (i >= rbin-1) {
-            if (numerator_of_dvrdr[i]/denominator_of_dvrdr[i] > 0.){
-                break;
-            } else {
-                ln_rAmin = log(rA);
-                rA = exp(.5*(log(rA)+ln_rAmax));
-                drA = rA - exp(ln_rAmin);
-                printf("increase rA \n");
-            }
-        } else {
-            ln_rAmax = log(rA);
-            rA = exp(.5*(log(rA)+ln_rAmin));
-            drA = exp(ln_rAmin)-rA;
-            printf("decrease rA \n");
-        }
+//        if (i >= rbin-1) {
+//            if (numerator_of_dvrdr[i]/denominator_of_dvrdr[i] > 0.){
+//                break;
+//            } else {
+//                ln_rAmin = log(rA);
+//                rA = exp(.5*(log(rA)+ln_rAmax));
+//                drA = rA - exp(ln_rAmin);
+//                printf("increase rA \n");
+//            }
+//        } else {
+//            ln_rAmax = log(rA);
+//            rA = exp(.5*(log(rA)+ln_rAmin));
+//            drA = exp(ln_rAmin)-rA;
+//            printf("decrease rA \n");
+//        }
         
         j++;
         
@@ -170,7 +167,7 @@ void trial_1st_stage(double dudxA, double TA, double LrA, double ln_rAmax, doubl
     }
     
     FILE *op;
-    op = fopen("rA2rwd1.dat","w");
+    op = fopen("rA2infty1.dat","w");
     for (j=0; j<rbin; j++) {
         if (j % 100 == 0){
             fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
@@ -179,109 +176,8 @@ void trial_1st_stage(double dudxA, double TA, double LrA, double ln_rAmax, doubl
     }
     fclose(op);
     
-    *rA_1st = rA;
-    *drA_1st = drA/(double)max_2ndtrial;
-    
-    free(r);
-    free(vr);
-    free(T);
-    free(Br);
-    free(Bphi);
-    free(vphi);
-    free(Lr);
-    free(rho);
-    free(denominator_of_dvrdr);
-    free(numerator_of_dvrdr);
-}
-
-
-void trial_2nd_stage(double dudxA, double TA, double LrA, double rA, double drA)
-{
-    /* to-be-calculated qunatities */
-    double vA,BrA,rhoA,vphiA,BphiA; /* at rA */
-    double Fm,FB,Lang,etot; /* conserved quantities */
-    double dr,Rfld,dTdr;
-    double *r,*vr,*T,*Br,*Bphi,*vphi,*Lr,*rho,*kappa,*denominator_of_dvrdr,*numerator_of_dvrdr;
-    r = (double *)malloc(rbin * sizeof(double));
-    vr = (double *)malloc(rbin * sizeof(double));
-    T = (double *)malloc(rbin * sizeof(double));
-    Br = (double *)malloc(rbin * sizeof(double));
-    Bphi = (double *)malloc(rbin * sizeof(double));
-    vphi = (double *)malloc(rbin * sizeof(double));
-    Lr = (double *)malloc(rbin * sizeof(double));
-    rho = (double *)malloc(rbin * sizeof(double));
-    kappa = (double *)malloc(rbin * sizeof(double));
-    denominator_of_dvrdr = (double *)malloc(rbin * sizeof(double));
-    numerator_of_dvrdr = (double *)malloc(rbin * sizeof(double));
-    
-    /* load kappa table */
-    double kappa_tab[index_T][index_R];
-    load_kappa_table(kappa_tab);
-    
-    int j=0;
-    while (j<max_2ndtrial){
-        printf("2nd trial No. %d: rA = %lf cm \n",j,rA);
-        
-        /* set radial coordinate */
-        set_r_from_rA_to_rWD(rA,r);
-        
-        /* calculate other parameters at rA */
-        set_para_at_rA(rA,dudxA,TA,LrA,&vA,&Br[0],&rho[0],&vphi[0],&Bphi[0],&Fm,&FB,&Lang,&etot);
-        vr[0] = vA;
-        T[0] = TA;
-        Lr[0] = LrA;
-        kappa[0] = kappa_fit(log10(T[0]),log10(rho[0]),kappa_tab);
-        
-        /* calculate the 1st step */
-        dr = r[1]-r[0];
-        Rfld = solve_Rfld(r[0],T[0],Lr[0]);
-        dTdr = solve_dTdr(rho[0],kappa[0],T[0],Rfld);
-        calc_dTdr(T[0],dr,dTdr,&T[1]);
-        calc_dVrdr_1ststep(vr[0],dr,dudxA,vA,rA,&vr[1]);
-        denominator_of_dvrdr[1] = dudxA*vA*vA;
-        numerator_of_dvrdr[1] = vA*rA;
-        solve_constraint_eqs(r[1],vr[1],T[1],rA,vA,Fm,FB,Lang,etot,&Br[1],&Bphi[1],&vphi[1],&Lr[1],&rho[1]);
-        kappa[1] = kappa_fit(log10(T[1]),log10(rho[1]),kappa_tab);
-        
-        /* calculate the 2nd step and more */
-        int i=1;
-        while (i<rbin-1 && denominator_of_dvrdr[i]*numerator_of_dvrdr[i] > 0.) {
-            dr = r[i+1]-r[i];
-            Rfld = solve_Rfld(r[i],T[i],Lr[i]);
-            dTdr = solve_dTdr(rho[i],kappa[i],T[i],Rfld);
-            calc_dTdr(T[i],dr,dTdr,&T[i+1]);
-            calc_dVrdr_2ndstep_and_more(vr[i],r[i],dr,rho[i],Br[i],Bphi[i],vphi[i],T[i],Lr[i],kappa[i],&vr[i+1],&denominator_of_dvrdr[i+1],&numerator_of_dvrdr[i+1]);
-            solve_constraint_eqs(r[i+1],vr[i+1],T[i+1],rA,vA,Fm,FB,Lang,etot,&Br[i+1],&Bphi[i+1],&vphi[i+1],&Lr[i+1],&rho[i+1]);
-            kappa[i+1] = kappa_fit(log10(T[i+1]),log10(rho[i+1]),kappa_tab);
-            i++;
-        }
-        
-        /* set next trial rA */
-        if (denominator_of_dvrdr[i]*numerator_of_dvrdr[i]>0.){
-            printf("find a solution \n");
-            break;
-        } else if (denominator_of_dvrdr[i] <=0.) {
-            rA -= drA;
-            printf("decrease rA \n");
-        } else {
-            rA += drA;
-            drA = 0.1*drA;
-            printf("increase rA \n");
-        }
-        
-        j++;
-        
-    }
-    
-    FILE *op;
-    op = fopen("rA2rwd2.dat","w");
-    for (j=0; j<rbin; j++) {
-        if (j % 100 == 0){
-            fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
-                    r[j],vr[j],T[j],Br[j],Bphi[j],vphi[j],Lr[j],rho[j],kappa[j],denominator_of_dvrdr[j],numerator_of_dvrdr[j]);
-        }
-    }
-    fclose(op);
+    *dudxA_1st = dudxA;
+    *ddudxA_1st = ddudxA/(double)max_2ndtrial;
     
     free(r);
     free(vr);
@@ -324,9 +220,9 @@ void set_para_at_rA(double rA, double dudxA, double TA, double LrA,
 }
 
 
-void set_r_from_rA_to_rWD(double rA, double r[])
+void set_r_from_rA_to_infty(double rA, double rmax, double r[])
 {
-    double del_ln_r = log(Rwd/rA)/(double)(rbin-1);
+    double del_ln_r = log(rmax/rA)/(double)(rbin-1);
     int i;
     for (i=0; i<rbin; i++) {
         r[i] = rA*exp(del_ln_r*(double)i);
