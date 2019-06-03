@@ -67,7 +67,7 @@ int main()
     
     /* trial 1st stage */
     double ln_dudxAmax = log(3.);
-    double ln_dudxAmin = log(3.);
+    double ln_dudxAmin = log(2.);
     double dudxA,ddudxA;
     trial_1st_stage(rA,rmax,TA,LrA,ln_dudxAmax,ln_dudxAmin,&dudxA,&ddudxA);
     
