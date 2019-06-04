@@ -110,16 +110,16 @@ void test( )
     FILE *op;
     op = fopen("test.dat","w");
     fprintf(op,"%4d %12f %12f %12f\n",flag,x,y[0],y[1]);
-    for ( i_step = 1; i_step <= n_step; i_step++ ){
-        x = ( ( double ) ( n_step - i_step + 1 ) * x_start
-             + ( double ) (          i_step - 1 ) * x_stop )
-            / ( double ) ( n_step              );
+    for (i_step = 1; i_step <= n_step; i_step++){
+        x = ( (double) ( n_step - i_step + 1 ) * x_start
+             + (double) (          i_step - 1 ) * x_stop )
+            / (double) ( n_step              );
         
-        x_out = ( ( double ) ( n_step - i_step ) * x_start
-                 + ( double ) (	   i_step ) * x_stop )
-                / ( double ) ( n_step );
+        x_out = ( (double) ( n_step - i_step ) * x_start
+                 + (double) (	   i_step ) * x_stop )
+                / (double) ( n_step );
 
-        flag = r8_rkf45 ( r8_f2, NEQN, y, yp, &x, x_out, &relerr, abserr, flag );
+        flag = r8_rkf45(r8_f2,NEQN,y,yp,&x,x_out,&relerr,abserr,flag);
 
         fprintf(op,"%4d %12f %12f %12f\n",flag,x,y[0],y[1]);
     }
