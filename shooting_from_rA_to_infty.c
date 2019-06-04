@@ -61,7 +61,7 @@ int main()
 {
     /* input parameters */
     double rA = 8185856364.370256;
-    double rmax = rA*1000.;
+    double rmax = rA*1.02;
     double TA = 3.e5;
     double LrA = 2.e38;
     
@@ -121,8 +121,8 @@ void trial_1st_stage(double rA, double rmax, double TA, double LrA, double ln_du
         dTdr = solve_dTdr(rho[0],kappa[0],T[0],Rfld);
         calc_dTdr(T[0],dr,dTdr,&T[1]);
         calc_dVrdr_1ststep(vr[0],dr,dudxA,vA,rA,&vr[1]);
-        denominator_of_dvrdr[1] = dudxA*vA*vA;
-        numerator_of_dvrdr[1] = vA*rA;
+        denominator_of_dvrdr[1] = -dudxA*vA*vA;
+        numerator_of_dvrdr[1] = -vA*rA;
         solve_constraint_eqs(r[1],vr[1],T[1],rA,vA,Fm,FB,Lang,etot,&Br[1],&Bphi[1],&vphi[1],&Lr[1],&rho[1]);
         kappa[1] = kappa_fit(log10(T[1]),log10(rho[1]),kappa_tab);
         
@@ -169,10 +169,10 @@ void trial_1st_stage(double rA, double rmax, double TA, double LrA, double ln_du
     FILE *op;
     op = fopen("rA2infty1.dat","w");
     for (j=0; j<rbin; j++) {
-        if (j % 100 == 0){
+        //if (j % 100 == 0){
             fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
                     r[j],vr[j],T[j],Br[j],Bphi[j],vphi[j],Lr[j],rho[j],kappa[j],denominator_of_dvrdr[j],numerator_of_dvrdr[j]);
-        }
+        //}
     }
     fclose(op);
     
