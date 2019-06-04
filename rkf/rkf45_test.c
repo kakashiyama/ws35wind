@@ -33,8 +33,8 @@ const int index_T=71;
 const int index_R=20;
 
 /* trial parameters */
-const double dudxA = 4.;
-const double rA = 8.19999e9;
+const double dudxA = 2.;
+const double rA = 8.2e9;
 const double TA = 3.e5;
 const double LrA = 2.e38;
 const double vA = Bwd*Bwd*Rwd*Rwd*Rwd*Rwd/Mdot/rA/rA;
@@ -56,17 +56,17 @@ double solve_dTdr(double rho, double kappa, double T, double Rfld);
 
 int main()
 {
-  timestamp ( );
+  timestamp();
 
   test();
 /*
   Terminate.
 */
-  printf ( "\n" );
-  printf ( "RKF45\n" );
-  printf ( "  Normal end of execution.\n" );
-  printf ( "\n" );
-  timestamp ( );
+  printf("\n");
+  printf("RKF45\n");
+  printf("  Normal end of execution.\n");
+  printf("\n");
+  timestamp();
 
   return 0;
 }
@@ -88,8 +88,8 @@ void test( )
     double y[NEQN];
     double yp[NEQN];
     
-    abserr = sqrt ( r8_epsilon ( ) );
-    relerr = sqrt ( r8_epsilon ( ) );
+    abserr = sqrt(r8_epsilon());
+    relerr = sqrt(r8_epsilon());
     
     flag = 1;
     
@@ -135,6 +135,8 @@ void r8_f2(double x, double y[], double yp[])
     /* x = r/rA */
     double u = y[0]; /* = vr/vA */
     double t = y[1]; /* = t/TA */
+    if (u < 0.)
+        exit(1);
     
     double rho = rhoA/u/x/x;
     double Br = BrA/x/x;
@@ -146,15 +148,14 @@ void r8_f2(double x, double y[], double yp[])
         vphi = rA*Omega*x*(1.-u)/(1.-x*x*u);
         Bphi = -BrA*rA*Omega/vA*x*(1.-x*x)/(1.-x*x*u);
     }
-    
+
     double hA = 5./2.*kB*TA/mu_mol/Mu + 4.*arad*pow(TA,4.)/3./rhoA;
     double kA = 0.5*(vA*vA + vphiA*vphiA);
     double etot = LrA/4./M_PI/Fm + kA + hA - G*Mwd/rA - rA*Omega*vphiA + Lang*Omega;
     
     double h = 5./2.*kB*(t*TA)/mu_mol/Mu + 4.*arad*pow(t*TA,4.)/3./rho;
     double k = 0.5*(vA*vA*u*u + vphi*vphi);
-    double Lr = 4.*M_PI*Fm*(etot - k - h + (G*Mwd/rA)/x + rA*Omega*vphi*x - Lang*Omega);
-    
+    double Lr = 4.*M_PI*Fm*(etot - k - h + G*Mwd/(x*rA) + rA*Omega*vphi*x - Lang*Omega);
     
     /* load kappa table */
     double kappa_tab[index_T][index_R];
@@ -164,14 +165,14 @@ void r8_f2(double x, double y[], double yp[])
     double Ar = Br/sqrt(4.*M_PI*rho);
     double Aphi = Bphi/sqrt(4.*M_PI*rho);
     
-    double denominator_of_dvrdr = (vA*vA*u*u - kB*(t*TA)/mu_mol/Mu - Aphi*Aphi*vA*vA*u*u/(vA*vA*u*u-Ar*Ar))*(x*rA)/(u*vA);
+    double denominator_of_dudx = (vA*vA*u*u - kB*(t*TA)/mu_mol/Mu - Aphi*Aphi*vA*vA*u*u/(vA*vA*u*u-Ar*Ar))*(x*rA)/(u*vA);
     double dPdr_term = 3.*kappa*Lr/16./M_PI/arad/C/pow(t*TA,3.)/(x*rA)*(rho*kB/mu_mol/Mu + 4./3.*arad*pow(t*TA,3.)) + 2.*kB*(t*TA)/mu_mol/Mu;
     double gravity_term = -G*Mwd/(x*rA);
     double centrifugal_force_term = vphi*vphi;
     double magnetic_term = 2.*(u*vA)*vphi*Ar*Aphi/(vA*vA*u*u-Ar*Ar);
-    double numerator_of_dvrdr = dPdr_term + gravity_term + centrifugal_force_term + magnetic_term;
+    double numerator_of_dudx = dPdr_term + gravity_term + centrifugal_force_term + magnetic_term;
     
-    yp[0] =  numerator_of_dvrdr/denominator_of_dvrdr*(rA/vA);
+    yp[0] =  numerator_of_dudx/denominator_of_dudx*(rA/vA);
     
     double Rfld = solve_Rfld(x*rA,t*TA,Lr);
     
@@ -208,11 +209,11 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     index_T_fit = i;
     
     if (index_T_fit == 1){
-        //printf("Warning (T too small for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[1][0],log10R);
+        printf("Warning (T too small for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[1][0],log10R);
         index_T_fit = 2;
         log10T = kappa_tab[1][0];
     } else if (index_T_fit == index_T){
-        //printf("Warning (T too large for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[index_T-1][0],log10R);
+        printf("Warning (T too large for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[index_T-1][0],log10R);
         log10T = kappa_tab[index_T-1][0];
     }
     
@@ -222,11 +223,11 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     index_R_fit = j;
     
     if (index_R_fit == 1){
-        //printf("Warning (R too small for opal kappa): log10R = %le --> %le , log10T = %le, log10rho = %le \n",log10R,kappa_tab[0][1],log10T,log10rho);
+        printf("Warning (R too small for opal kappa): log10R = %le --> %le , log10T = %le, log10rho = %le \n",log10R,kappa_tab[0][1],log10T,log10rho);
         index_R_fit = 2;
         log10R = kappa_tab[0][1];
     } else if (index_R_fit == index_R){
-        //printf("Warning (R too large got opsl kappa): log10R = %le --> %le , log10T = %le \n",log10R,kappa_tab[0][index_R-1],log10T);
+        printf("Warning (R too large got opsl kappa): log10R = %le --> %le , log10T = %le \n",log10R,kappa_tab[0][index_R-1],log10T);
         log10R = kappa_tab[0][index_R-1];
     }
     
