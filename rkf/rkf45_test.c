@@ -32,17 +32,22 @@ const double FB = Rwd*Rwd*Bwd;
 const int index_T=71;
 const int index_R=20;
 
-/* trial parameters */
-const double dudxA = 2.;
+/* trial parameters at rA */
+const double dudxA = 5.;
 const double rA = 8.2e9;
 const double TA = 3.e5;
 const double LrA = 2.e38;
+
+/* calculate other parameters at rA */
 const double vA = Bwd*Bwd*Rwd*Rwd*Rwd*Rwd/Mdot/rA/rA;
 const double rhoA = Fm/vA/rA/rA;
 const double BrA = FB/rA/rA;
 const double vphiA = rA*Omega*dudxA/(2.+ dudxA);
 const double BphiA = -BrA*rA*Omega/vA*(2./(2.+ dudxA));
 const double Lang = rA*rA*Omega;
+const double kA = 0.5*(vA*vA + vphiA*vphiA);
+const double hA = 5./2.*kB*TA/mu_mol/Mu + 4.*arad*TA*TA*TA*TA/3./rhoA;
+const double etot = LrA/4./M_PI/Fm + kA + hA - G*Mwd/rA - rA*Omega*vphiA + Lang*Omega;
 
 
 int main(void);
@@ -93,18 +98,17 @@ void test( )
     
     flag = 1;
     
-    x_start = 1.0;
-    //x_stop = 10.;
+    double eps = -1.e-5;
+    x_start = 1.+eps;
     x_stop = Rwd/rA;
-
     
-    n_step = 100;
+    n_step = 10000;
     
-    x = 1.0;
-    x_out = 1.0;
+    x = 1.+eps;
+    x_out = 1.+eps;
     
-    y[0] = 1.0;
-    y[1] = 1.0;
+    y[0] = 1.+dudxA*eps;
+    y[1] = 1.;
     r8_f2(x,y,yp);
     
     FILE *op;
@@ -148,10 +152,6 @@ void r8_f2(double x, double y[], double yp[])
         vphi = rA*Omega*x*(1.-u)/(1.-x*x*u);
         Bphi = -BrA*rA*Omega/vA*x*(1.-x*x)/(1.-x*x*u);
     }
-
-    double hA = 5./2.*kB*TA/mu_mol/Mu + 4.*arad*pow(TA,4.)/3./rhoA;
-    double kA = 0.5*(vA*vA + vphiA*vphiA);
-    double etot = LrA/4./M_PI/Fm + kA + hA - G*Mwd/rA - rA*Omega*vphiA + Lang*Omega;
     
     double h = 5./2.*kB*(t*TA)/mu_mol/Mu + 4.*arad*pow(t*TA,4.)/3./rho;
     double k = 0.5*(vA*vA*u*u + vphi*vphi);
@@ -209,11 +209,11 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     index_T_fit = i;
     
     if (index_T_fit == 1){
-        printf("Warning (T too small for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[1][0],log10R);
+        //printf("Warning (T too small for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[1][0],log10R);
         index_T_fit = 2;
         log10T = kappa_tab[1][0];
     } else if (index_T_fit == index_T){
-        printf("Warning (T too large for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[index_T-1][0],log10R);
+        //printf("Warning (T too large for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[index_T-1][0],log10R);
         log10T = kappa_tab[index_T-1][0];
     }
     
@@ -223,11 +223,11 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     index_R_fit = j;
     
     if (index_R_fit == 1){
-        printf("Warning (R too small for opal kappa): log10R = %le --> %le , log10T = %le, log10rho = %le \n",log10R,kappa_tab[0][1],log10T,log10rho);
+        //printf("Warning (R too small for opal kappa): log10R = %le --> %le , log10T = %le, log10rho = %le \n",log10R,kappa_tab[0][1],log10T,log10rho);
         index_R_fit = 2;
         log10R = kappa_tab[0][1];
     } else if (index_R_fit == index_R){
-        printf("Warning (R too large got opsl kappa): log10R = %le --> %le , log10T = %le \n",log10R,kappa_tab[0][index_R-1],log10T);
+        //printf("Warning (R too large got opsl kappa): log10R = %le --> %le , log10T = %le \n",log10R,kappa_tab[0][index_R-1],log10T);
         log10R = kappa_tab[0][index_R-1];
     }
     
