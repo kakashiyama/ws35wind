@@ -63,6 +63,7 @@ void calc_derivatives(double r, double vr, double T, double rho, double vphi, do
 void load_kappa_table(double kappa_tab[index_T][index_R]);
 double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index_R]);
 double solve_Rfld(double r, double T, double Lr);
+double calc_lambda(double Rfld);
 double solve_dTdr(double rho, double kappa, double T, double Rfld);
 
 
@@ -234,16 +235,18 @@ void calc_derivatives(double r, double vr, double T, double rho, double vphi, do
 {
     double Ar = Br/sqrt(4.*M_PI*rho);
     double Aphi = Bphi/sqrt(4.*M_PI*rho);
+    double Rfld = solve_Rfld(r,T,Lr);
+    double lambda = calc_lambda(Rfld);
+    printf("%12.3e %12.3e %12.3e \n",r,Rfld,lambda);
     
     double denominator_of_dvrdr = (vr*vr - kB*T/mu_mol/Mu - Aphi*Aphi*vr*vr/(vr*vr-Ar*Ar))*r/vr;
     
-    double dPdr_term = 3.*kappa*Lr/16./M_PI/arad/C/pow(T,3.)/r*(rho*kB/mu_mol/Mu + 4./3.*arad*pow(T,3.)) + 2.*kB*T/mu_mol/Mu;
+    double dPdr_term = kappa*Lr/lambda/16./M_PI/arad/C/pow(T,3.)/r*(rho*kB/mu_mol/Mu + 4./3.*arad*pow(T,3.)) + 2.*kB*T/mu_mol/Mu;
     double gravity_term = -G*Mwd/r;
     double centrifugal_force_term = vphi*vphi;
     double magnetic_term = 2.*vr*vphi*Ar*Aphi/(vr*vr-Ar*Ar);
     double numerator_of_dvrdr = dPdr_term + gravity_term + centrifugal_force_term + magnetic_term;
     
-    double Rfld = solve_Rfld(r,T,Lr);
     
     if (numerator_of_dvrdr*denominator_of_dvrdr < 0.){
         printf("exit : vr diverge \n");
@@ -318,10 +321,18 @@ double solve_Rfld(double r, double T, double Lr)
 {
     /* analytic solution of Rfld for given r, T, and Lr */
     double s = Lr/(4.*M_PI*pow(r,2.)*arad*pow(T,4.)*C);
+    printf("%12.3e",s);
     
-    return (3.*s-2+sqrt(4.+12.*s-15.*s*s))/2./(1.-s);
+    if (s > 1.e-4)
+        return (3.*s-2+sqrt(4.+12.*s-15.*s*s))/2./(1.-s);
+    else
+        return 3*s;
 }
 
+double calc_lambda(double Rfld)
+{
+    return (2.+Rfld)/(6.+3.*Rfld+Rfld*Rfld);
+}
 
 double solve_dTdr(double rho, double kappa, double T, double Rfld)
 {
