@@ -36,7 +36,7 @@ const int index_T=71;
 const int index_R=20;
 
 /* trial parameters at rA */
-const double dudxA = .9;
+const double dudxA = 0.9;
 const double rA = 8.2e9;
 const double TA = 3.e5;
 const double LrA = 2.e38;
@@ -102,6 +102,7 @@ void test( )
         T = y[1]*TA;
         solve_constraint_eqs(r[i],vr,T,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
         calc_derivatives(r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr);
+
 
         fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
                 x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,dvrdr,dTdr);
@@ -244,8 +245,10 @@ void calc_derivatives(double r, double vr, double T, double rho, double vphi, do
     
     double Rfld = solve_Rfld(r,T,Lr);
     
-    if (numerator_of_dvrdr*denominator_of_dvrdr < 0.)
+    if (numerator_of_dvrdr*denominator_of_dvrdr < 0.){
+        printf("exit : vr diverge \n");
         exit(1);
+    }
     
     *dvrdr = numerator_of_dvrdr/denominator_of_dvrdr;
     *dTdr = solve_dTdr(rho,kappa,T,Rfld);
