@@ -2,8 +2,8 @@
 # include <stdio.h>
 # include <math.h>
 
-# include "rkf45.h"
-# include "rkf45.c"
+//# include "rkf45.h"
+//# include "rkf45.c"
 
 /* physical constant */
 const double mol = 6.02e23;
@@ -17,6 +17,9 @@ const double Mu = 1.6726219e-24;
 const double Msun = 2.e33;
 const double Rsun = 6.9551e10;
 const double Yr = 365.*24.*60.*60.;
+
+/* number of radial bin */
+const int rbin = 1000;
 
 /* model parameters */
 const double mu_mol = .5;
@@ -37,6 +40,7 @@ const double dudxA = .9;
 const double rA = 8.2e9;
 const double TA = 3.e5;
 const double LrA = 2.e38;
+const double rmax = 30.*rA;
 
 /* calculate other parameters at rA */
 const double vA = Bwd*Bwd*Rwd*Rwd*Rwd*Rwd/Mdot/rA/rA;
@@ -53,6 +57,7 @@ const double etot = LrA/4./M_PI/Fm + kA + hA - G*Mwd/rA - rA*Omega*vphiA + Lang*
 void test(void);
 void r8_f2(double x, double y[], double yp[]);
 void rk(double x, double dx, double y[], double yp[]);
+void set_r_from_rA_to_infty(double rA, double r[]);
 void solve_constraint_eqs(double r, double vr, double T, double *rho, double *vphi, double *Br, double *Bphi, double *Lr, double *kappa);
 void calc_derivatives(double r, double vr, double T, double rho, double vphi, double Br, double Bphi, double Lr, double kappa, double *dvrdr, double *dTdr);
 void load_kappa_table(double kappa_tab[index_T][index_R]);
@@ -63,111 +68,47 @@ double solve_dTdr(double rho, double kappa, double T, double Rfld);
 
 int main()
 {
-  timestamp();
-
   test();
-/*
-  Terminate.
-*/
-  printf("\n");
-  printf("RKF45\n");
-  printf("  Normal end of execution.\n");
-  printf("\n");
-  timestamp();
-
   return 0;
 }
 
 
 void test( )
 {
-# define NEQN 2
-
-    double abserr;
-    int flag;
-    int i_step;
-    int n_step;
-    double relerr;
+    int i;
     double x,dx;
-    double x_out;
     double x_start;
     double x_stop;
-    double y[NEQN];
-    double yp[NEQN];
+    double y[2];
+    double yp[2];
     
-    double r,vr,T;
+    double r[rbin],vr,T;
     double rho,vphi,Br,Bphi,Lr,kappa;
     double dvrdr,dTdr;
-
-    abserr = 1.;//sqrt(r8_epsilon());
-    relerr = 1.;//sqrt(r8_epsilon());
-    
-    flag = 1;
-    
-    x_start = 1.;
-    x_stop = 30.;
-    
-    n_step = 10000;
-    
-    x = 1.;
-    x_out = 1.;
+    set_r_from_rA_to_infty(rA,r);
     
     y[0] = 1.;
     y[1] = 1.;
-    r8_f2(x,y,yp);
-    r = x*rA;
-    vr = y[0]*vA;
-    T = y[1]*TA;
-    solve_constraint_eqs(r,vr,T,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
-    calc_derivatives(r,vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr);
     
     FILE *op;
     op = fopen("test.dat","w");
-    fprintf(op,"%4d %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
-            flag,x,y[0],y[1],yp[0],yp[1],r,vr,T,rho,vphi,Br,Bphi,Lr,kappa,dvrdr,dTdr);
+    for (i=0; i<rbin-1; i++) {
+        x = r[i]/rA;
+        dx = (r[i+1]-r[i])/rA;
     
-    for ( i_step = 1; i_step <= n_step; i_step++ )
-    {
-        x = ( ( double ) ( n_step - i_step + 1 ) * x_start
-            + ( double ) (          i_step - 1 ) * x_stop )
-            / ( double ) ( n_step              );
+        rk(x,dx,y,yp);
 
-        x_out = ( ( double ) ( n_step - i_step ) * x_start
-                + ( double ) (          i_step ) * x_stop )
-                / ( double ) ( n_step          );
-
-        flag = r8_rkf45(r8_f2,NEQN,y,yp,&x,x_out,&relerr,abserr,flag);
-
-        r = x*rA;
         vr = y[0]*vA;
         T = y[1]*TA;
-        solve_constraint_eqs(r,vr,T,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
-        calc_derivatives(r,vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr);
+        solve_constraint_eqs(r[i],vr,T,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
+        calc_derivatives(r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr);
 
-        fprintf(op,"%4d %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
-                flag,x,y[0],y[1],yp[0],yp[1],r,vr,T,rho,vphi,Br,Bphi,Lr,kappa,dvrdr,dTdr);
+        fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
+                x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,dvrdr,dTdr);
     }
-    
-//    for (i_step=0; i_step<n_step; i_step++) {
-//        x = x_start + (double)i_step*(x_stop-x_start)/(double)(n_step - 1);
-//        dx = (x_stop-x_start)/(double)(n_step - 1);
-//
-//        rk(x,dx,y,yp);
-//
-//        r = x*rA;
-//        vr = y[0]*vA;
-//        T = y[1]*TA;
-//        solve_constraint_eqs(r,vr,T,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
-//        calc_derivatives(r,vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr);
-//
-//        fprintf(op,"%4d %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
-//                flag,x,y[0],y[1],yp[0],yp[1],r,vr,T,rho,vphi,Br,Bphi,Lr,kappa,dvrdr,dTdr);
-//    }
-    
     fclose(op);
     
     return;
-# undef NEQN
 }
 
 
@@ -237,6 +178,15 @@ void rk(double x, double dx, double y[], double yp[])
     y[1] = y[1] + (k1[1]+2.*k2[1]+2.*k3[1]+k4[1])/6.;
     
     return;
+}
+
+void set_r_from_rA_to_infty(double rA, double r[])
+{
+    double del_ln_r = log(rmax/rA)/(double)(rbin-1);
+    int i;
+    for (i=0; i<rbin; i++) {
+        r[i] = rA*exp(del_ln_r*(double)i);
+    }
 }
 
 
@@ -309,7 +259,7 @@ void load_kappa_table(double kappa_tab[index_T][index_R])
     int i,j;
     
     FILE *ip;
-    ip = fopen("../tab46.dat","r");
+    ip = fopen("tab46.dat","r");
     for (i=0; i<index_T; i++) {
         for (j=0; j<index_R; j++) {
             fscanf(ip,"%le ",&kappa_tab[i][j]);
