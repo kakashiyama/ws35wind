@@ -27,7 +27,7 @@ const double Mdot = 3.0e-6*Msun/Yr;
 const int rbin = 1000000;
 
 /* shooting trial number */
-const int max_1sttrial = 1;
+const int max_1sttrial = 50;
 const int max_2ndtrial = 50;
 
 /* optcaity table #46 */
@@ -60,14 +60,14 @@ double michel_wind_velocity(double r, double br, double omega, double mdot);
 int main()
 {
     /* input parameters */
-    double rA = 8185856364.370256;
-    double rmax = rA*1.02;
+    double rA = 8.2e9;
+    double rmax = rA*100.0;
     double TA = 3.e5;
     double LrA = 2.e38;
     
     /* trial 1st stage */
-    double ln_dudxAmax = log(3.);
-    double ln_dudxAmin = log(2.);
+    double ln_dudxAmax = log(10.);
+    double ln_dudxAmin = log(1.e-3);
     double dudxA,ddudxA;
     trial_1st_stage(rA,rmax,TA,LrA,ln_dudxAmax,ln_dudxAmin,&dudxA,&ddudxA);
     
@@ -128,7 +128,7 @@ void trial_1st_stage(double rA, double rmax, double TA, double LrA, double ln_du
         
         /* calculate the 2nd step and more */
         int i=1;
-        while (i<rbin-1 && vr[i] > 0.){
+        while (i<rbin-1 && denominator_of_dvrdr[i]*numerator_of_dvrdr[i] > 0.){
             dr = r[i+1]-r[i];
             Rfld = solve_Rfld(r[i],T[i],Lr[i]);
             dTdr = solve_dTdr(rho[i],kappa[i],T[i],Rfld);
@@ -140,21 +140,19 @@ void trial_1st_stage(double rA, double rmax, double TA, double LrA, double ln_du
         }
         
         /* set next trial rA */
-//        if (i >= rbin-1) {
-//            if (numerator_of_dvrdr[i]/denominator_of_dvrdr[i] > 0.){
-//                break;
-//            } else {
-//                ln_rAmin = log(rA);
-//                rA = exp(.5*(log(rA)+ln_rAmax));
-//                drA = rA - exp(ln_rAmin);
-//                printf("increase rA \n");
-//            }
-//        } else {
-//            ln_rAmax = log(rA);
-//            rA = exp(.5*(log(rA)+ln_rAmin));
-//            drA = exp(ln_rAmin)-rA;
-//            printf("decrease rA \n");
-//        }
+        if (i >= rbin-1) {
+            break;
+        } else if (denominator_of_dvrdr[i] < 0.){
+            ln_dudxAmin = log(dudxA);
+            dudxA = exp(.5*(log(dudxA)+ln_dudxAmax));
+            ddudxA = dudxA - exp(ln_dudxAmin);
+            printf("increase dudxA \n");
+        } else if (numerator_of_dvrdr[i] < 0.) {
+            ln_dudxAmax = log(dudxA);
+            dudxA = exp(.5*(log(dudxA)+ln_dudxAmin));
+            ddudxA = exp(ln_dudxAmin)-dudxA;
+            printf("decrease dudxA \n");
+        }
         
         j++;
         
