@@ -60,8 +60,13 @@ double michel_wind_velocity(double r, double br, double omega, double mdot);
 int main()
 {
     /* input parameters */
+<<<<<<< Updated upstream
     double rA = 8.2e9;
     double rmax = rA*100.0;
+=======
+    double rA = 8185856364.370256;
+    double rmax = rA*1.05;
+>>>>>>> Stashed changes
     double TA = 3.e5;
     double LrA = 2.e38;
     

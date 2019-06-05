@@ -212,6 +212,7 @@ void solve_constraint_eqs(double r, double vr, double T, double *rho, double *vp
     double h = 5./2.*kB*T/mu_mol/Mu + 4.*arad*pow(T,4.)/3./rho_tmp;
     double k = 0.5*(vr*vr + vphi_tmp*vphi_tmp);
     double Lr_tmp = 4.*M_PI*Fm*(etot - k - h + G*Mwd/r + r*Omega*vphi_tmp - Lang*Omega);
+    printf("%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",etot,h,k,G*Mwd/r,r*Omega*vphi_tmp,Lang*Omega);
     if (Lr_tmp < 0.)
         Lr_tmp = 0.;
     
@@ -237,7 +238,7 @@ void calc_derivatives(double r, double vr, double T, double rho, double vphi, do
     double Aphi = Bphi/sqrt(4.*M_PI*rho);
     double Rfld = solve_Rfld(r,T,Lr);
     double lambda = calc_lambda(Rfld);
-    printf("%12.3e %12.3e %12.3e \n",r,Rfld,lambda);
+    //printf("%12.3e %12.3e %12.3e \n",r,Rfld,lambda);
     
     double denominator_of_dvrdr = (vr*vr - kB*T/mu_mol/Mu - Aphi*Aphi*vr*vr/(vr*vr-Ar*Ar))*r/vr;
     
@@ -321,12 +322,9 @@ double solve_Rfld(double r, double T, double Lr)
 {
     /* analytic solution of Rfld for given r, T, and Lr */
     double s = Lr/(4.*M_PI*pow(r,2.)*arad*pow(T,4.)*C);
-    printf("%12.3e",s);
+    //printf("%12.3e",s);
     
-    if (s > 1.e-4)
-        return (3.*s-2+sqrt(4.+12.*s-15.*s*s))/2./(1.-s);
-    else
-        return 3*s;
+    return (3.*s-2+sqrt(4.+12.*s-15.*s*s))/2./(1.-s);
 }
 
 double calc_lambda(double Rfld)
