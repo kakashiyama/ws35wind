@@ -4,3 +4,5 @@ Rwd 1.e8
 Bwd 3.e8
 Omega .1
 Mdot 3.e-6
+TA 3e5
+LrA 2.e38
