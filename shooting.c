@@ -1,25 +1,12 @@
-# include <stdlib.h>
-# include <stdio.h>
-# include <math.h>
-
-//# include "rkf45.h"
-//# include "rkf45.c"
-
-/* physical constant */
-const double mol = 6.02e23;
-const double joul_to_erg = 1.e7;
-const double Rgas = 8.314462618*joul_to_erg/mol;
-const double arad = 7.5657e-15;
-const double G = 6.67408e-8;
-const double C = 2.99792458e10;
-const double kB = 1.38064852e-16;
-const double Mu = 1.6726219e-24;
-const double Msun = 2.e33;
-const double Rsun = 6.9551e10;
-const double Yr = 365.*24.*60.*60.;
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include "const.h"
+#include "shooting.h"
 
 /* number of radial bin */
 const int rbin = 1000;
+const double rmax = 1.e15;
 
 /* model parameters */
 const double mu_mol = .5;
@@ -31,16 +18,11 @@ const double Mdot = 3.e-6*Msun/Yr;
 const double Fm = Mdot/4./M_PI;
 const double FB = Rwd*Rwd*Bwd;
 
-/* optcaity table #46 */
-const int index_T=71;
-const int index_R=20;
-
 /* trial parameters at rA */
-const double dudxA = 0.9;
+const double dudxA = .99;
 const double rA = 8.2e9;
 const double TA = 3.e5;
 const double LrA = 2.e38;
-const double rmax = 30.*rA;
 
 /* calculate other parameters at rA */
 const double vA = Bwd*Bwd*Rwd*Rwd*Rwd*Rwd/Mdot/rA/rA;
@@ -50,46 +32,33 @@ const double vphiA = rA*Omega*dudxA/(2.+ dudxA);
 const double BphiA = -BrA*rA*Omega/vA*(2./(2.+ dudxA));
 const double Lang = rA*rA*Omega;
 const double kA = 0.5*(vA*vA + vphiA*vphiA);
-const double hA = 5./2.*kB*TA/mu_mol/Mu + 4.*arad*TA*TA*TA*TA/3./rhoA;
-const double etot = LrA/4./M_PI/Fm + kA + hA - G*Mwd/rA - rA*Omega*vphiA + Lang*Omega;
-
-
-void test(void);
-void r8_f2(double x, double y[], double yp[]);
-void rk(double x, double dx, double y[], double yp[]);
-void set_r_from_rA_to_infty(double rA, double r[]);
-void solve_constraint_eqs(double r, double vr, double T, double *rho, double *vphi, double *Br, double *Bphi, double *Lr, double *kappa);
-void calc_derivatives(double r, double vr, double T, double rho, double vphi, double Br, double Bphi, double Lr, double kappa, double *dvrdr, double *dTdr);
-void load_kappa_table(double kappa_tab[index_T][index_R]);
-double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index_R]);
-double solve_Rfld(double r, double T, double Lr);
-double calc_lambda(double Rfld);
-double solve_dTdr(double rho, double kappa, double T, double Rfld);
-
+const double hA = 5./2.*kB*TA/mu_mol/Mu;
+const double etotA = LrA/4./M_PI/Fm + kA + hA - G*Mwd/rA - rA*Omega*vphiA + Lang*Omega;
 
 int main()
 {
-  test();
-  return 0;
+    shooting();
+    return 0;
 }
 
 
-void test( )
+void shooting()
 {
     int i;
     double x,dx;
     double x_start;
     double x_stop;
-    double y[2];
-    double yp[2];
+    double y[3];
+    double yp[3];
     
-    double r[rbin],vr,T;
+    double r[rbin],vr,T,etot;
     double rho,vphi,Br,Bphi,Lr,kappa;
-    double dvrdr,dTdr;
+    double dvrdr,dTdr,detotdr;
     set_r_from_rA_to_infty(rA,r);
     
     y[0] = 1.;
     y[1] = 1.;
+    y[2] = 1.;
     
     FILE *op;
     op = fopen("test.dat","w");
@@ -101,12 +70,12 @@ void test( )
 
         vr = y[0]*vA;
         T = y[1]*TA;
-        solve_constraint_eqs(r[i],vr,T,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
-        calc_derivatives(r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr);
+        etot = y[2]*etotA;
+        solve_constraint_eqs(r[i],vr,T,etot,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
+        calc_derivatives(r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr);
 
-
-        fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
-                x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,dvrdr,dTdr);
+        fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
+                x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,etot,dvrdr,dTdr,detotdr);
     }
     fclose(op);
     
@@ -114,20 +83,22 @@ void test( )
 }
 
 
-void r8_f2(double x, double y[], double yp[])
+void radial_step(double x, double y[], double yp[])
 {
     double u = y[0];
     double t = y[1];
+    double e = y[2];
     
     double r = x*rA;
     double vr = u*vA;
     double T = t*TA;
+    double etot = e*etotA;
     
     double rho,vphi,Br,Bphi,Lr,kappa;
-    solve_constraint_eqs(r,vr,T,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
-
-    double dvrdr,dTdr;
-    calc_derivatives(r,vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr);
+    solve_constraint_eqs(r,vr,T,etot,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
+    
+    double dvrdr,dTdr,detotdr;
+    calc_derivatives(r,vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr);
     
     if (x == 1.){
         yp[0] = dudxA;
@@ -135,52 +106,64 @@ void r8_f2(double x, double y[], double yp[])
         yp[0] = dvrdr*(rA/vA);
     }
     yp[1] = dTdr*(rA/TA);
-
+    yp[2] = detotdr*(rA/etotA);
+    
     return;
 }
 
 
 void rk(double x, double dx, double y[], double yp[])
 {
-    double y_tmp[2];
-    double yp_tmp[2];
-    double k1[2];
-    double k2[2];
-    double k3[2];
-    double k4[2];
+    double y_tmp[3];
+    double yp_tmp[3];
+    double k1[3];
+    double k2[3];
+    double k3[3];
+    double k4[3];
     
     y_tmp[0] = y[0];
     y_tmp[1] = y[1];
-    r8_f2(x,y,yp_tmp);
+    y_tmp[2] = y[2];
+    radial_step(x,y,yp_tmp);
     k1[0] = dx*yp_tmp[0];
     k1[1] = dx*yp_tmp[1];
+    k1[2] = dx*yp_tmp[2];
     
     yp[0] = yp_tmp[0];
     yp[1] = yp_tmp[1];
+    yp[2] = yp_tmp[2];
     
     y_tmp[0] = y[0] + .5*k1[0];
     y_tmp[1] = y[1] + .5*k1[1];
-    r8_f2(x+.5*dx,y_tmp,yp_tmp);
+    y_tmp[2] = y[2] + .5*k1[2];
+    radial_step(x+.5*dx,y_tmp,yp_tmp);
     k2[0] = dx*yp_tmp[0];
     k2[1] = dx*yp_tmp[1];
+    k2[2] = dx*yp_tmp[2];
     
     y_tmp[0] = y[0] + .5*k2[0];
     y_tmp[1] = y[1] + .5*k2[1];
-    r8_f2(x+.5*dx,y_tmp,yp_tmp);
+    y_tmp[2] = y[2] + .5*k2[2];
+    radial_step(x+.5*dx,y_tmp,yp_tmp);
     k3[0] = dx*yp_tmp[0];
     k3[1] = dx*yp_tmp[1];
-    
+    k3[2] = dx*yp_tmp[2];
+
     y_tmp[0] = y[0] + k3[0];
     y_tmp[1] = y[1] + k3[1];
-    r8_f2(x+dx,y_tmp,yp_tmp);
+    y_tmp[2] = y[2] + k3[2];
+    radial_step(x+dx,y_tmp,yp_tmp);
     k4[0] = dx*yp_tmp[0];
     k4[1] = dx*yp_tmp[1];
+    k4[2] = dx*yp_tmp[2];
     
     y[0] = y[0] + (k1[0]+2.*k2[0]+2.*k3[0]+k4[0])/6.;
     y[1] = y[1] + (k1[1]+2.*k2[1]+2.*k3[1]+k4[1])/6.;
+    y[2] = y[2] + (k1[2]+2.*k2[2]+2.*k3[2]+k4[2])/6.;
     
     return;
 }
+
 
 void set_r_from_rA_to_infty(double rA, double r[])
 {
@@ -192,7 +175,7 @@ void set_r_from_rA_to_infty(double rA, double r[])
 }
 
 
-void solve_constraint_eqs(double r, double vr, double T, double *rho, double *vphi, double *Br, double *Bphi, double *Lr, double *kappa)
+void solve_constraint_eqs(double r, double vr, double T, double etot, double *rho, double *vphi, double *Br, double *Bphi, double *Lr, double *kappa)
 {
     double x = r/rA;
     double u = vr/vA;
@@ -209,18 +192,15 @@ void solve_constraint_eqs(double r, double vr, double T, double *rho, double *vp
         Bphi_tmp = -BrA*rA*Omega/vA*x*(1.-x*x)/(1.-x*x*u);
     }
     
-    double h = 5./2.*kB*T/mu_mol/Mu + 4.*arad*pow(T,4.)/3./rho_tmp;
+    double h = 5./2.*kB*T/mu_mol/Mu;
     double k = 0.5*(vr*vr + vphi_tmp*vphi_tmp);
     double Lr_tmp = 4.*M_PI*Fm*(etot - k - h + G*Mwd/r + r*Omega*vphi_tmp - Lang*Omega);
-    printf("%12.3e %12.3e %12.3e %12.3e %12.3e %12.3e \n",etot,h,k,G*Mwd/r,r*Omega*vphi_tmp,Lang*Omega);
-    if (Lr_tmp < 0.)
-        Lr_tmp = 0.;
     
     /* load kappa table */
     double kappa_tab[index_T][index_R];
     load_kappa_table(kappa_tab);
     double kappa_tmp = kappa_fit(log10(T),log10(rho_tmp),kappa_tab);
-
+    
     *rho = rho_tmp;
     *vphi = vphi_tmp;
     *Br = Br_tmp;
@@ -232,13 +212,12 @@ void solve_constraint_eqs(double r, double vr, double T, double *rho, double *vp
 }
 
 
-void calc_derivatives(double r, double vr, double T, double rho, double vphi, double Br, double Bphi, double Lr, double kappa, double *dvrdr, double *dTdr)
+void calc_derivatives(double r, double vr, double T, double rho, double vphi, double Br, double Bphi, double Lr, double kappa, double *dvrdr, double *dTdr, double *detotdr)
 {
     double Ar = Br/sqrt(4.*M_PI*rho);
     double Aphi = Bphi/sqrt(4.*M_PI*rho);
     double Rfld = solve_Rfld(r,T,Lr);
     double lambda = calc_lambda(Rfld);
-    //printf("%12.3e %12.3e %12.3e \n",r,Rfld,lambda);
     
     double denominator_of_dvrdr = (vr*vr - kB*T/mu_mol/Mu - Aphi*Aphi*vr*vr/(vr*vr-Ar*Ar))*r/vr;
     
@@ -248,14 +227,16 @@ void calc_derivatives(double r, double vr, double T, double rho, double vphi, do
     double magnetic_term = 2.*vr*vphi*Ar*Aphi/(vr*vr-Ar*Ar);
     double numerator_of_dvrdr = dPdr_term + gravity_term + centrifugal_force_term + magnetic_term;
     
-    
     if (numerator_of_dvrdr*denominator_of_dvrdr < 0.){
         printf("exit : vr diverge \n");
         exit(1);
     }
     
+    double dTdr_tmp = solve_dTdr(rho,kappa,T,Rfld);
+    
     *dvrdr = numerator_of_dvrdr/denominator_of_dvrdr;
-    *dTdr = solve_dTdr(rho,kappa,T,Rfld);
+    *dTdr = dTdr_tmp;
+    *detotdr = lambda*(4./3.*arad*pow(T,3.)/rho)*dTdr_tmp;
     
     return ;
 }
@@ -322,7 +303,6 @@ double solve_Rfld(double r, double T, double Lr)
 {
     /* analytic solution of Rfld for given r, T, and Lr */
     double s = Lr/(4.*M_PI*pow(r,2.)*arad*pow(T,4.)*C);
-    //printf("%12.3e",s);
     
     return (3.*s-2+sqrt(4.+12.*s-15.*s*s))/2./(1.-s);
 }
