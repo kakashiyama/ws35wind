@@ -18,7 +18,7 @@ int main()
     int rbin = 10000;
     int nshot = 1;
     int nshot_max = 50;
-    double dudxA = 0.9;
+    double dudxA = 1.5;
 
     double logrAmax = log(100.*Rsun);
     double logrAmin = log(2.*sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
