@@ -27,9 +27,9 @@ int main()
     flag = 99;
     while (flag != 0 && nshot < nshot_max){
         fix = calc_fixed_para(in,rA,dudxA);
-        flag = single_inshot(in,fix,rA,dudxA,rstop,rbin);
+        flag = inshot(in,fix,rA,dudxA,rstop,rbin);
 
-        printf("Shot No. %d  end with << flag %d >> rA = %12.7e\n",nshot,flag,rA);
+        printf("In-shot No. %d with rA = %12.7e [cm] --> end with << flag %d >> \n",nshot,rA,flag);
 
         if (flag == 1) {
             logrAmax = log(rA);
@@ -42,6 +42,10 @@ int main()
         }
         nshot++;
     }
+    
+    rstop = 1000*rA;
+    flag = outshot(in,fix,rA,dudxA,rstop,rbin);
+    printf("Out-shot with rA = %12.7e [cm] --> end with << flag %d >> \n",rA,flag);
     
     return 0;
 }
@@ -89,7 +93,7 @@ struct _fixed calc_fixed_para(struct _input in, double rA, double dudxA)
     return fix;
 }
 
-int single_inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double rstop, int rbin)
+int inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double rstop, int rbin)
 {
     int flag = 0;
     
@@ -141,7 +145,8 @@ int single_inshot(struct _input in, struct _fixed fix, double rA, double dudxA, 
     return flag;
 }
 
-int shooting(struct _input in, struct _fixed fix, double rA, double dudxA, double rstop, int rbin)
+
+int outshot(struct _input in, struct _fixed fix, double rA, double dudxA, double rstop, int rbin)
 {
     int flag = 0;
     
@@ -162,7 +167,7 @@ int shooting(struct _input in, struct _fixed fix, double rA, double dudxA, doubl
     y[2] = 1.;
     
     FILE *op;
-    op = fopen("test.dat","w");
+    op = fopen("outshot.dat","w");
     for (i=0; i<rbin-1; i++) {
         x = r[i]/rA;
         dx = (r[i+1]-r[i])/rA;
@@ -173,6 +178,10 @@ int shooting(struct _input in, struct _fixed fix, double rA, double dudxA, doubl
         T = y[1]*in.TA;
         etot = y[2]*fix.etotA;
         solve_constraint_eqs(in,fix,rA,r[i],vr,T,etot,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
+        
+        fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
+                x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,etot,dvrdr,dTdr,detotdr);
+        
         calc_derivatives(in,r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
         
         if (nume*deno < 0.){
@@ -180,11 +189,9 @@ int shooting(struct _input in, struct _fixed fix, double rA, double dudxA, doubl
                 flag = 1;
             else
                 flag = 2;
-            //break;
+            break;
         }
         
-        fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
-                x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,etot,dvrdr,dTdr,detotdr);
     }
     fclose(op);
     
