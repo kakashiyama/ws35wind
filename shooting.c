@@ -135,6 +135,10 @@ int inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double 
             flag = 1;
             break;
         }
+        //else if (nume*deno < 0.){
+        //    flag = 2;
+        //    break;
+        //}
         
     }
     fclose(op);
