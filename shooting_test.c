@@ -8,48 +8,41 @@
 
 int main()
 {
-//    /* load input file */
-//    struct _input in = load_inputfile();
-//    struct _fixed fix;
-//
-//    /* trial parameters for each shot */
-//    int flag;
-//    double rstop = 1.e14;//in.Rwd;
-//    int rbin = 1000;
-//    int nshot = 1;
-//    int nshot_max = 2;
-//    double dudxA = 0.9;
-//
-//    double logrAmax = log(8.2e9);
-//    double logrAmin = log(8.2e9);
-//    double rA = exp(0.5*(logrAmax+logrAmin));
-//
-//    flag = 99;
-//    while (flag != 0 && nshot < nshot_max){
-//        fix = calc_fixed_para(in,rA,dudxA);
-//        flag = single_shot(in,fix,rA,dudxA,rstop,rbin);
-//
-//        printf("No. %d < flag %d > rA = %12.7e\n",nshot,flag,rA);
-//
-//        if (flag == 1) {
-//            logrAmin = log(rA);
-//            rA = exp(0.5*(logrAmin+logrAmax));
-//        } else if (flag == 2){
-//            logrAmax = log(rA);
-//            rA = exp(0.5*(logrAmin+logrAmax));
-//        } else {
-//            break;
-//        }
-//        nshot++;
-//    }
-    
+    /* load input file */
     struct _input in = load_inputfile();
-    int rbin = 1000;
+    struct _fixed fix;
+
+    /* trial parameters for each shot */
+    int flag;
     double rstop = in.Rwd;
+    int rbin = 10000;
+    int nshot = 1;
+    int nshot_max = 50;
     double dudxA = 0.9;
-    double rA = 8.7425e9;
-    struct _fixed fix = calc_fixed_para(in,rA,dudxA);
-    int flag = shooting(in,fix,rA,dudxA,rstop,rbin);
+
+    double logrAmax = log(100.*Rsun);
+    double logrAmin = log(2.*sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
+    double rA = exp(0.5*(logrAmax+logrAmin));
+
+    flag = 99;
+    while (flag != 0 && nshot < nshot_max){
+        fix = calc_fixed_para(in,rA,dudxA);
+        flag = single_inshot(in,fix,rA,dudxA,rstop,rbin);
+
+        printf("Shot No. %d  end with << flag %d >> rA = %12.7e\n",nshot,flag,rA);
+
+        if (flag == 1) {
+            logrAmax = log(rA);
+            rA = exp(0.5*(logrAmin+log(rA)));
+        } else if (flag == 2){
+            logrAmin = log(rA);
+            rA = exp(0.5*(log(rA)+logrAmax));
+        } else {
+            break;
+        }
+        nshot++;
+    }
+    
     return 0;
 }
 
@@ -90,13 +83,13 @@ struct _fixed calc_fixed_para(struct _input in, double rA, double dudxA)
     fix.BphiA = -fix.BrA*rA*in.Omega/fix.vA*(2./(2.+ dudxA));
     fix.Lang = rA*rA*in.Omega;
     fix.kA = 0.5*(pow(fix.vA,2.) + pow(fix.vphiA,2.));
-    fix.hA = 5./2.*kB*in.TA/in.mu_mol/Mu /*+ 4.*arad*pow(in.TA,4.)/3./fix.rhoA */;
+    fix.hA = 5./2.*kB*in.TA/in.mu_mol/Mu;
     fix.etotA = in.LrA/4./M_PI/fix.Fm + fix.kA + fix.hA - G*in.Mwd/rA - rA*in.Omega*fix.vphiA + fix.Lang*in.Omega;
 
     return fix;
 }
 
-int single_shot(struct _input in, struct _fixed fix, double rA, double dudxA, double rstop, int rbin)
+int single_inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double rstop, int rbin)
 {
     int flag = 0;
     
@@ -117,7 +110,7 @@ int single_shot(struct _input in, struct _fixed fix, double rA, double dudxA, do
     y[2] = 1.;
     
     FILE *op;
-    op = fopen("test.dat","w");
+    op = fopen("inshot.dat","w");
     for (i=0; i<rbin-1; i++) {
         x = r[i]/rA;
         dx = (r[i+1]-r[i])/rA;
@@ -128,23 +121,22 @@ int single_shot(struct _input in, struct _fixed fix, double rA, double dudxA, do
         T = y[1]*in.TA;
         etot = y[2]*fix.etotA;
         solve_constraint_eqs(in,fix,rA,r[i],vr,T,etot,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
-        calc_derivatives(in,r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
-        
-        if ( isnan(vr) || nume*deno < 0.){
-            if ( isnan(vr) ){
-                flag = 1;
-            } else {
-                flag = 2;
-            }
-            //break;
-        }
         
         fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
                 x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,etot,dvrdr,dTdr,detotdr);
         
+        calc_derivatives(in,r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
+        
+        if ( vr < 0. || isnan(vr)){
+            flag = 1;
+            break;
+        }
+        
     }
     fclose(op);
 
+    if (i>=rbin-1 && nume*deno < 0.)
+        flag = 2;
     
     return flag;
 }
@@ -311,10 +303,9 @@ void solve_constraint_eqs(struct _input in, struct _fixed fix, double rA,
         Bphi_tmp = -fix.BrA*rA*in.Omega/fix.vA*x*(1.-x*x)/(1.-x*x*u);
     }
     
-    double h = 5./2.*kB*T/in.mu_mol/Mu /*+ 4.*arad*pow(T,4.)/3./rho_tmp*/;
+    double h = 5./2.*kB*T/in.mu_mol/Mu;
     double k = 0.5*(vr*vr + vphi_tmp*vphi_tmp);
     double Lr_tmp = 4.*M_PI*fix.Fm*(etot - k - h + G*in.Mwd/r + r*in.Omega*vphi_tmp - fix.Lang*in.Omega);
-    printf("%12.3e %12.3e %12.3e %12.3e %12.3e ",vr,etot,k,h,vphi_tmp);
     
     /* load kappa table */
     double kappa_tab[index_T][index_R];
@@ -336,25 +327,24 @@ void calc_derivatives(struct _input in,
                       double r, double vr, double T, double rho, double vphi, double Br, double Bphi, double Lr, double kappa,
                       double *dvrdr, double *dTdr, double *detotdr, double *nume, double *deno)
 {
-    double Ar = Br/sqrt(4.*M_PI*rho);
-    double Aphi = Bphi/sqrt(4.*M_PI*rho);
     double Rfld = solve_Rfld(r,T,Lr);
     double lambda = calc_lambda(Rfld);
+    double dTdr_tmp = solve_dTdr(rho,kappa,T,Rfld);
     
+    double Ar = Br/sqrt(4.*M_PI*rho);
+    double Aphi = Bphi/sqrt(4.*M_PI*rho);
     double denominator_of_dvrdr = (vr*vr - kB*T/in.mu_mol/Mu - Aphi*Aphi*vr*vr/(vr*vr-Ar*Ar))*r/vr;
     
-    double dPdr_term = kappa*Lr/lambda/16./M_PI/arad/C/pow(T,3.)/r*(rho*kB/in.mu_mol/Mu + 4./3.*arad*pow(T,3.)) + 2.*kB*T/in.mu_mol/Mu;
+    double dPdr_term = dTdr_tmp*(rho*kB/in.mu_mol/Mu + 4.*lambda*arad*pow(T,3.)) + 2.*kB*T/in.mu_mol/Mu;
     double gravity_term = -G*in.Mwd/r;
     double centrifugal_force_term = vphi*vphi;
     double magnetic_term = 2.*vr*vphi*Ar*Aphi/(vr*vr-Ar*Ar);
     double numerator_of_dvrdr = dPdr_term + gravity_term + centrifugal_force_term + magnetic_term;
     
-    double dTdr_tmp = solve_dTdr(rho,kappa,T,Rfld);
     
     *dvrdr = numerator_of_dvrdr/denominator_of_dvrdr;
     *dTdr = dTdr_tmp;
-    *detotdr = lambda*(4./3.*arad*pow(T,3.)/rho)*dTdr_tmp;
-    printf("%12.3e %12.3e \n",Rfld,lambda);
+    *detotdr = 4.*lambda*arad*pow(T,3.)/rho*dTdr_tmp;
     *nume = numerator_of_dvrdr;
     *deno = denominator_of_dvrdr;
     
@@ -423,13 +413,14 @@ double solve_Rfld(double r, double T, double Lr)
 {
     /* analytic solution of Rfld for given r, T, and Lr */
     double s = Lr/(4.*M_PI*pow(r,2.)*arad*pow(T,4.)*C);
-    printf("%12.3e %12.3e %12.3e ",Lr,T,s);
+    //printf("%12.3e ",s);
     return (3.*s-2+sqrt(4.+12.*s-15.*s*s))/2./(1.-s);
 }
 
 
 double calc_lambda(double Rfld)
 {
+    //printf("%12.3e ",Rfld);
     return (2.+Rfld)/(6.+3.*Rfld+Rfld*Rfld);
 }
 

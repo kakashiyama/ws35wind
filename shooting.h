@@ -1,7 +1,7 @@
 struct _input load_inputfile();
 struct _fixed calc_fixed_para(struct _input in, double rA, double dudxA);
 int shooting(struct _input in, struct _fixed fix, double rA, double dudxA, double rstop, int rbin);
-int single_shot(struct _input in, struct _fixed fix, double rA, double dudxA, double rstop, int rbin);
+int single_inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double rstop, int rbin);
 void set_r_from_rA_to_infty(double rA, double rstop, int rbin, double r[]);
 void radial_step(struct _input in, struct _fixed fix, double rA, double dudxA, double x, double y[], double yp[]);
 void rk(struct _input in, struct _fixed fix, double rA, double dudxA, double x, double dx, double y[], double yp[]);

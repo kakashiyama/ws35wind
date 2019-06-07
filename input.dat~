@@ -1,8 +1,0 @@
-mu_mol .5 
-Mwd 1.3
-Rwd 1.e8
-Bwd 3.e8
-Omega .01
-Mdot 3.e-6
-TA 3e5
-LrA 2.e38
