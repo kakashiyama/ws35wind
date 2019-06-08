@@ -15,14 +15,47 @@ plot \
 "../inshot.dat" usi 6:7 w l title "",\
 "../outshot.dat" usi 6:7 w l title ""
 
+unse yrange
 se output "T.eps"
 se ylabel "temperature  T [K]" font "Times-Roman, 16"
 plot \
 "../inshot.dat" usi 6:8 w l title "",\
 "../outshot.dat" usi 6:8 w l title ""
 
+unse yrange
 se output "rho.eps"
-se ylabel "temperature  {/Symbol r} [g/cm^3]" font "Times-Roman, 16"
+se ylabel "density  {/Symbol r} [g/cm^3]" font "Times-Roman, 16"
 plot \
 "../inshot.dat" usi 6:9 w l title "",\
 "../outshot.dat" usi 6:9 w l title ""
+
+unse yrange
+se output "vphi.eps"
+se ylabel "wind tangential velocity  v_{/Symbol j} [cm/s]" font "Times-Roman, 16"
+plot \
+"../inshot.dat" usi 6:($10) w l title "",\
+"../outshot.dat" usi 6:( $10) w l title ""
+
+unse yrange
+se output "Bphi.eps"
+se ylabel "tangential magnetic field  B_{/Symbol j} [G]" font "Times-Roman, 16"
+unse yrange 
+plot \
+"../inshot.dat" usi 6:(-$12) w l title "",\
+"../outshot.dat" usi 6:(-$12) w l title ""
+
+unse log y
+unse yrange
+unse format y
+se output "Lr.eps"
+se ylabel "luminosity  L_{rad} [erg/s]" font "Times-Roman, 16"
+plot \
+"../inshot.dat" usi 6:13 w l title "",\
+"../outshot.dat" usi 6:13 w l title ""
+
+unse yrange
+se output "kappa.eps"
+se ylabel "opacity  {/Symbol k} [g/cm^2]" font "Times-Roman, 16"
+plot \
+"../inshot.dat" usi 6:14 w l title "",\
+"../outshot.dat" usi 6:14 w l title ""

@@ -22,3 +22,11 @@ double calc_epsCC(double T, double rho)
 
   return 5.49e43*f_CC*rho*pow(X12,2.)*pow(T9,-3./2.)*pow(T9alpha,5./6.)*exp(-84.165/pow(T9alpha,1./3.))/(exp(-0.01*pow(T9alpha,4.)) + 5.56e-3*exp(1.685*pow(T9alpha,2./3.)));
 }
+
+double calc_ratio_CCvsRad(double vr, double T, double rho, double detotdr)
+{
+    double epsCC = calc_epsCC(T,rho);
+    double detotdrCC = epsCC/vr;
+    
+    return detotdr/detotdrCC;
+}

@@ -1,0 +1,15 @@
+#include <stdio.h>
+#include <math.h>
+
+int main()
+{
+  return 0;
+}
+
+void load_data()
+{
+  FILE *ip;
+  ip = fopen("../inshot.dat","r");
+  fclose(ip);
+  return ;
+}
