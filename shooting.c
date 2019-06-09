@@ -15,12 +15,12 @@ int main()
     /* trial parameters for each shot */
     int flag;
     double rstop = in.Rwd;
-    int rbin = 1000;
+    int rbin = 100000;
     int nshot = 1;
-    int nshot_max = 50;
-    double dudxA = 0.5;
+    int nshot_max = 30;
+    double dudxA = .2;
 
-    double logrAmax = log(Rsun);
+    double logrAmax = log(0.5*Rsun);
     double logrAmin = log(2.*sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
     double rA = exp(0.5*(logrAmax+logrAmin));
 
@@ -31,10 +31,10 @@ int main()
 
         printf("In-shot No. %d with rA = %12.9e [cm] --> end with << flag %d >> \n",nshot,rA,flag);
 
-        if (flag == 1) {
+        if (flag == 1 || flag == 2) {
             logrAmax = log(rA);
             rA = exp(0.5*(logrAmin+log(rA)));
-        } else if (flag == 2){
+        } else if (flag == 3){
             logrAmin = log(rA);
             rA = exp(0.5*(log(rA)+logrAmax));
         } else {
@@ -43,7 +43,7 @@ int main()
         nshot++;
     }
     
-    rstop = 100*rA;
+    rstop = 100.*rA;
     flag = outshot(in,fix,rA,dudxA,rstop,rbin);
     printf("Out-shot with rA = %12.9e [cm] --> end with << flag %d >> \n",rA,flag);
     
@@ -130,15 +130,19 @@ int inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double 
         
         rk(in,fix,rA,dudxA,x,dx,y,yp);
         
-        if ( y[0] < 0. || isnan(y[0])){
+        if ( y[0] < 0.){
             flag = 1;
             break;
+        } else if ( isnan(y[0])) {
+            flag = 2;
+            break;
         }
+        
     }
     fclose(op);
 
     if (i>=rbin-1 && nume*deno < 0.)
-        flag = 2;
+        flag = 3;
     
     return flag;
 }
@@ -412,7 +416,9 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     double kappa_Tdirect_max = (kappa_tab[index_T_fit][index_R_fit]-kappa_tab[index_T_fit][index_R_fit-1])/(kappa_tab[0][index_R_fit]-kappa_tab[0][index_R_fit-1])*(log10R-kappa_tab[0][index_R_fit-1])+kappa_tab[index_T_fit][index_R_fit-1];
     double log10kappa = (kappa_Tdirect_max-kappa_Tdirect_min)/(kappa_tab[index_T_fit][0]-kappa_tab[index_T_fit-1][0])*(log10T-kappa_tab[index_T_fit-1][0])+kappa_Tdirect_min;
     
+    //return .2;
     return pow(10.,log10kappa);
+
 }
 
 
