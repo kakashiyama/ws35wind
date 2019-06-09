@@ -3,8 +3,7 @@
 #include <math.h>
 #include "const.h"
 #include "shooting.h"
-
-/* number of radial bin */
+#include "MT.h"
 
 int main()
 {
@@ -13,41 +12,39 @@ int main()
     struct _fixed fix;
 
     /* trial parameters for each shot */
-    int flag;
-    double rstop = in.Rwd;
+    int flagin,flagout;
     int rbin = 100;
-    int nshot = 1;
-    //int nshot_max = 100;
-    int nshot_max = 1;
-    double dudxA = 2.080621739e+00;
-
-    double logrAmax = log(0.5*Rsun);
-    double logrAmin = log(2.*sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
-    //double rA = exp(0.5*(logrAmax+logrAmin));
-    double rA = 5.440052523e+09;
     
-    flag = 99;
-    while (flag != 0 && nshot < nshot_max){
+    double dudxAmax = .9;
+    double dudxAmin = 1.1;
+    double rAmax = .15*Rsun;
+    double rAmin = 2.*sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C));
+    printf("%12.5e %12.5e \n",rAmax,rAmin);
+    
+    double rA,dudxA;
+    double rstop;
+    int i=1,max_trial = 100000;
+    
+    while (i < max_trial){
+        rA = generate_random_trial(rAmin,rAmax);
+        dudxA = generate_random_trial(dudxAmin,dudxAmax);
         fix = calc_fixed_para(in,rA,dudxA);
-        flag = inshot(in,fix,rA,dudxA,rstop,rbin);
+        
+        rstop = in.Rwd;
+        flagin = inshot(in,fix,rA,dudxA,rstop,rbin);
 
-        printf("In-shot No. %d with rA = %12.9e [cm] --> end with << flag %d >> \n",nshot,rA,flag);
+        rstop = 100.*rA;
+        flagout = outshot(in,fix,rA,dudxA,rstop,rbin);
 
-        if (flag == 1 || flag == 2) {
-            logrAmax = log(rA);
-            rA = exp(0.5*(logrAmin+log(rA)));
-        } else if (flag == 3){
-            logrAmin = log(rA);
-            rA = exp(0.5*(log(rA)+logrAmax));
-        } else {
+        if (flagin == 0 /*&& flagout == 0*/){
+            printf("%12.9e %12.9e %d %d \n",rA,dudxA,flagin,flagout);
             break;
         }
-        nshot++;
+        
+        printf("trial no.%d \n",i);
+        
+        i++;
     }
-    
-    rstop = 100.*rA;
-    flag = outshot(in,fix,rA,dudxA,rstop,rbin);
-    printf("Out-shot with rA = %12.9e [cm] --> end with << flag %d >> \n",rA,flag);
     
     return 0;
 }
@@ -121,15 +118,6 @@ int inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double 
         x = r[i]/rA;
         dx = (r[i+1]-r[i])/rA;
         
-        /* only for output */
-        vr = y[0]*fix.vA;
-        T = y[1]*in.TA;
-        etot = y[2]*fix.etotA;
-        solve_constraint_eqs(in,fix,rA,r[i],vr,T,etot,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
-        calc_derivatives(in,r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
-        fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
-                x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,etot,dvrdr,dTdr,detotdr);
-        
         rk(in,fix,rA,dudxA,x,dx,y,yp);
         
         if ( y[0] < 0.){
@@ -142,8 +130,8 @@ int inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double 
         
     }
     fclose(op);
-
-    if (i>=rbin-1 && nume*deno < 0.)
+    
+    if (i>=rbin-1 && yp[0] < 0.)
         flag = 3;
     
     return flag;
@@ -175,23 +163,13 @@ int outshot(struct _input in, struct _fixed fix, double rA, double dudxA, double
     for (i=0; i<rbin-1; i++) {
         x = r[i]/rA;
         dx = (r[i+1]-r[i])/rA;
-        
-        /* only for output */
-        vr = y[0]*fix.vA;
-        T = y[1]*in.TA;
-        etot = y[2]*fix.etotA;
-        solve_constraint_eqs(in,fix,rA,r[i],vr,T,etot,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
-        calc_derivatives(in,r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
-        fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
-                x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,etot,dvrdr,dTdr,detotdr);
-        
         rk(in,fix,rA,dudxA,x,dx,y,yp);
         
-        if (nume*deno < 0.){
-            if (nume < 0.)
-                flag = 1;
-            else
-                flag = 2;
+        if (yp[0] < 0.){
+            flag = 1;
+            break;
+        } else if (isnan(yp[0])){
+            flag = 2;
             break;
         }
         
@@ -443,4 +421,9 @@ double calc_lambda(double Rfld)
 double solve_dTdr(double rho, double kappa, double T, double Rfld)
 {
     return -Rfld*kappa*rho*T/4.;
+}
+
+double generate_random_trial(double xmin, double xmax)
+{
+    return xmin+genrand_real3()*(xmax-xmin);
 }

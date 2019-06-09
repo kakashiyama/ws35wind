@@ -16,6 +16,7 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
 double solve_Rfld(double r, double T, double Lr);
 double calc_lambda(double Rfld);
 double solve_dTdr(double rho, double kappa, double T, double Rfld);
+double generate_random_trial(double xmin, double xmax);
 
 struct _input{
   double mu_mol;
