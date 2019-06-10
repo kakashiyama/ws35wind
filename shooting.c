@@ -15,16 +15,17 @@ int main()
     /* trial parameters for each shot */
     int flag;
     double rstop = in.Rwd;
-    int rbin = 100;
+    int rbin = 10000;
     int nshot = 1;
-    //int nshot_max = 100;
-    int nshot_max = 1;
-    double dudxA = 2.080621739e+00;
-
-    double logrAmax = log(0.5*Rsun);
+    int nshot_max = 50;
+    //int nshot_max = 1;
+    //double dudxA = 2.080621739e+00;
+    double dudxA = 1.;
+    
+    double logrAmax = log(1.*Rsun);
     double logrAmin = log(2.*sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
-    //double rA = exp(0.5*(logrAmax+logrAmin));
-    double rA = 5.440052523e+09;
+    double rA = exp(0.5*(logrAmax+logrAmin));
+    //double rA = 5.440052523e+09;
     
     flag = 99;
     while (flag != 0 && nshot < nshot_max){
@@ -33,7 +34,10 @@ int main()
 
         printf("In-shot No. %d with rA = %12.9e [cm] --> end with << flag %d >> \n",nshot,rA,flag);
 
-        if (flag == 1 || flag == 2) {
+        if (flag == 1) {
+            logrAmax = log(rA);
+            rA = exp(0.5*(logrAmin+log(rA)));
+        } else if (flag == 2){
             logrAmax = log(rA);
             rA = exp(0.5*(logrAmin+log(rA)));
         } else if (flag == 3){
@@ -126,11 +130,12 @@ int inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double 
         T = y[1]*in.TA;
         etot = y[2]*fix.etotA;
         solve_constraint_eqs(in,fix,rA,r[i],vr,T,etot,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
-        calc_derivatives(in,r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
+        calc_derivatives(in,fix,rA,dudxA,r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
         fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
                 x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,etot,dvrdr,dTdr,detotdr);
         
         rk(in,fix,rA,dudxA,x,dx,y,yp);
+        
         
         if ( y[0] < 0.){
             flag = 1;
@@ -181,7 +186,7 @@ int outshot(struct _input in, struct _fixed fix, double rA, double dudxA, double
         T = y[1]*in.TA;
         etot = y[2]*fix.etotA;
         solve_constraint_eqs(in,fix,rA,r[i],vr,T,etot,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
-        calc_derivatives(in,r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
+        calc_derivatives(in,fix,rA,dudxA,r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
         fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
                 x,y[0],y[1],yp[0],yp[1],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,etot,dvrdr,dTdr,detotdr);
         
@@ -227,7 +232,7 @@ void radial_step(struct _input in, struct _fixed fix, double rA, double dudxA, d
     solve_constraint_eqs(in,fix,rA,r,vr,T,etot,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
     
     double dvrdr,dTdr,detotdr,nume,deno;
-    calc_derivatives(in,r,vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
+    calc_derivatives(in,fix,rA,dudxA,r,vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
     
     if (x == 1.){
         yp[0] = dudxA;
@@ -310,7 +315,6 @@ void solve_constraint_eqs(struct _input in, struct _fixed fix, double rA,
         Bphi_tmp = fix.BphiA;
     } else {
         vphi_tmp = rA*in.Omega*x*(1.-u)/(1.-x*x*u);
-        //Bphi_tmp = -fix.BrA*rA*in.Omega/fix.vA*x*(1.-x*x)/(1.-x*x*u);
         Bphi_tmp = -Br_tmp*rA*in.Omega/fix.vA*x*(1.-x*x)/(1.-x*x*u);
     }
     
@@ -333,8 +337,7 @@ void solve_constraint_eqs(struct _input in, struct _fixed fix, double rA,
     return ;
 }
 
-
-void calc_derivatives(struct _input in,
+void calc_derivatives(struct _input in, struct _fixed fix, double rA, double dudxA,
                       double r, double vr, double T, double rho, double vphi, double Br, double Bphi, double Lr, double kappa,
                       double *dvrdr, double *dTdr, double *detotdr, double *nume, double *deno)
 {
@@ -355,7 +358,10 @@ void calc_derivatives(struct _input in,
     double numerator_of_dvrdr = dPdr_term + gravity_term + centrifugal_force_term + magnetic_term;
     
     
-    *dvrdr = numerator_of_dvrdr/denominator_of_dvrdr;
+    if (vr != Ar)
+        *dvrdr = numerator_of_dvrdr/denominator_of_dvrdr;
+    else
+        *dvrdr = dudxA*fix.vA/rA;
     *dTdr = dTdr_tmp;
     *detotdr = kappa*Lr/(4.*M_PI*r*r*C);//4.*lambda*arad*pow(T,3.)/rho*dTdr_tmp;
     *nume = numerator_of_dvrdr;

@@ -8,7 +8,7 @@ void rk(struct _input in, struct _fixed fix, double rA, double dudxA, double x, 
 void solve_constraint_eqs(struct _input in, struct _fixed fix, double rA,
                           double r, double vr, double T, double etot,
                           double *rho, double *vphi, double *Br, double *Bphi, double *Lr, double *kappa);
-void calc_derivatives(struct _input in,
+void calc_derivatives(struct _input in, struct _fixed fix, double rA, double dudxA,
                       double r, double vr, double T, double rho, double vphi, double Br, double Bphi, double Lr, double kappa,
                       double *dvrdr, double *dTdr, double *detotdr, double *nume, double *deno);
 void load_kappa_table(double kappa_tab[index_T][index_R]);
