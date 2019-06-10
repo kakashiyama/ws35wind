@@ -18,14 +18,11 @@ int main()
     int rbin = 10000;
     int nshot = 1;
     int nshot_max = 50;
-    //int nshot_max = 1;
-    //double dudxA = 2.080621739e+00;
-    double dudxA = 1.;
+    double dudxA = .385;
     
-    double logrAmax = log(1.*Rsun);
+    double logrAmax = log(.5*Rsun);
     double logrAmin = log(2.*sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
     double rA = exp(0.5*(logrAmax+logrAmin));
-    //double rA = 5.440052523e+09;
     
     flag = 99;
     while (flag != 0 && nshot < nshot_max){
@@ -52,6 +49,11 @@ int main()
     rstop = 100.*rA;
     flag = outshot(in,fix,rA,dudxA,rstop,rbin);
     printf("Out-shot with rA = %12.9e [cm] --> end with << flag %d >> \n",rA,flag);
+    
+    FILE *op;
+    op = fopen("output.dat","w");
+    fprintf(op," rA = %lf cm \n dudxA = %lf \n",rA,dudxA);
+    fclose(op);
     
     return 0;
 }
@@ -310,12 +312,12 @@ void solve_constraint_eqs(struct _input in, struct _fixed fix, double rA,
     double rho_tmp = fix.rhoA/u/x/x;
     double Br_tmp = fix.BrA/x/x;
     double vphi_tmp,Bphi_tmp;
-    if (x == 1.){
-        vphi_tmp = fix.vphiA;
-        Bphi_tmp = fix.BphiA;
-    } else {
+    if (x != 1.){
         vphi_tmp = rA*in.Omega*x*(1.-u)/(1.-x*x*u);
         Bphi_tmp = -Br_tmp*rA*in.Omega/fix.vA*x*(1.-x*x)/(1.-x*x*u);
+    } else {
+        vphi_tmp = fix.vphiA;
+        Bphi_tmp = fix.BphiA;
     }
     
     double h = 5./2.*kB*T/in.mu_mol/Mu;
@@ -349,8 +351,6 @@ void calc_derivatives(struct _input in, struct _fixed fix, double rA, double dud
     double Aphi = Bphi/sqrt(4.*M_PI*rho);
     double denominator_of_dvrdr = (vr*vr - kB*T/in.mu_mol/Mu - Aphi*Aphi*vr*vr/(vr*vr-Ar*Ar))*r/vr;
     
-    //double dPdr_term = dTdr_tmp*(rho*kB/in.mu_mol/Mu + 4.*lambda*arad*pow(T,3.)) + 2.*kB*T/in.mu_mol/Mu;
-    //double dPdr_term = rho*kappa*Lr/(4.*M_PI*r*r*C) + dTdr_tmp*rho*kB/in.mu_mol/Mu + 2.*kB*T/in.mu_mol/Mu;
     double dPdr_term = kappa*Lr/(4.*M_PI*r*C) + dTdr_tmp*r*kB/in.mu_mol/Mu + 2.*kB*T/in.mu_mol/Mu;
     double gravity_term = -G*in.Mwd/r;
     double centrifugal_force_term = vphi*vphi;
@@ -363,7 +363,7 @@ void calc_derivatives(struct _input in, struct _fixed fix, double rA, double dud
     else
         *dvrdr = dudxA*fix.vA/rA;
     *dTdr = dTdr_tmp;
-    *detotdr = kappa*Lr/(4.*M_PI*r*r*C);//4.*lambda*arad*pow(T,3.)/rho*dTdr_tmp;
+    *detotdr = kappa*Lr/(4.*M_PI*r*r*C);
     *nume = numerator_of_dvrdr;
     *deno = denominator_of_dvrdr;
     
