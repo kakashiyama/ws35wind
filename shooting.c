@@ -46,13 +46,37 @@ int main()
         nshot++;
     }
     
+    double dudxAmax = 2.*dudxA;
+    double dudxAmin = .5*dudxA;
+    nshot = 1;
+    flag = 99;
     rstop = 100.*rA;
-    flag = outshot(in,fix,rA,dudxA,rstop,rbin);
-    printf("Out-shot with rA = %12.9e [cm] --> end with << flag %d >> \n",rA,flag);
-    
+    while (flag != 0 && nshot < nshot_max){
+        fix = calc_fixed_para(in,rA,dudxA);
+        flag = outshot(in,fix,rA,dudxA,rstop,rbin);
+        
+        printf("Out-shot with dudxA = %12.9e --> end with << flag %d >> \n",dudxA,flag);
+        
+        if (flag == 1) {
+            dudxAmax = dudxA;
+            dudxA = 0.5*(dudxAmin+dudxA);
+        } else if (flag == 2){
+            dudxAmax = dudxA;
+            dudxA = 0.5*(dudxAmin+dudxA);
+        } else if (flag == 3){
+            dudxAmin = dudxA;
+            dudxA = 0.5*(dudxA+dudxAmax);
+        } else {
+            break;
+        }
+        nshot++;
+        
+    }
+
     FILE *op;
     op = fopen("output.dat","w");
-    fprintf(op," rA = %lf cm \n dudxA = %lf \n",rA,dudxA);
+    fprintf(op,"rA [cm] dudxA rbin rAmax rAmin");
+    fprintf(op,"%lf %lf %d %lf %lf",rA,dudxA,rbin,exp(logrAmax),exp(logrAmin));
     fclose(op);
     
     return 0;
@@ -204,6 +228,9 @@ int outshot(struct _input in, struct _fixed fix, double rA, double dudxA, double
         
     }
     fclose(op);
+    
+    if (i>=rbin-1 && nume < 0.)
+        flag = 3;
     
     return flag;
 }
