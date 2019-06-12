@@ -15,10 +15,10 @@ int main()
     /* trial parameters for each shot */
     int flag;
     double rstop = in.Rwd;
-    int rbin = 10000;
+    int rbin = 1000;
     int nshot = 1;
     int nshot_max = 50;
-    double dudxA = .4125;
+    double dudxA = 1.1;
     
     double logrAmax = log(.5*Rsun);
     double logrAmin = log(2.*sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
@@ -29,12 +29,9 @@ int main()
         fix = calc_fixed_para(in,rA,dudxA);
         flag = inshot(in,fix,rA,dudxA,rstop,rbin);
 
-        printf("In-shot No. %d with rA = %12.9e [cm] --> end with << flag %d >> \n",nshot,rA,flag);
+        printf("In-shot No. %d with rA = %12.14e [cm] --> end with << flag %d >> \n",nshot,rA,flag);
 
-        if (flag == 1) {
-            logrAmax = log(rA);
-            rA = exp(0.5*(logrAmin+log(rA)));
-        } else if (flag == 2){
+        if (flag == 1 || flag == 2) {
             logrAmax = log(rA);
             rA = exp(0.5*(logrAmin+log(rA)));
         } else if (flag == 3){
@@ -46,26 +43,23 @@ int main()
         nshot++;
     }
     
-    double dudxAmax = 2.*dudxA;
-    double dudxAmin = .5*dudxA;
+    double logdudxAmax = log(3.*dudxA);
+    double logdudxAmin = log(dudxA/3.);
     nshot = 1;
     flag = 99;
-    rstop = 100.*rA;
+    rstop = rA*(rA/in.Rwd);
     while (flag != 0 && nshot < nshot_max){
         fix = calc_fixed_para(in,rA,dudxA);
         flag = outshot(in,fix,rA,dudxA,rstop,rbin);
         
-        printf("Out-shot with dudxA = %12.9e --> end with << flag %d >> \n",dudxA,flag);
+        printf("Out-shot No. %d with dudxA = %12.14e --> end with << flag %d >> \n",nshot,dudxA,flag);
         
-        if (flag == 1) {
-            dudxAmax = dudxA;
-            dudxA = 0.5*(dudxAmin+dudxA);
-        } else if (flag == 2){
-            dudxAmax = dudxA;
-            dudxA = 0.5*(dudxAmin+dudxA);
-        } else if (flag == 3){
-            dudxAmin = dudxA;
-            dudxA = 0.5*(dudxA+dudxAmax);
+        if (flag == 1 || flag == 3 || flag == 5) {
+            logdudxAmax = log(dudxA);
+            dudxA = exp(0.5*(logdudxAmin+log(dudxA)));
+        } else if (flag == 2 || flag == 4){
+            logdudxAmin = log(dudxA);
+            dudxA = exp(0.5*(log(dudxA)+logdudxAmax));
         } else {
             break;
         }
@@ -76,7 +70,7 @@ int main()
     FILE *op;
     op = fopen("output.dat","w");
     fprintf(op,"rA [cm] dudxA rbin rAmax rAmin");
-    fprintf(op,"%lf %lf %d %lf %lf",rA,dudxA,rbin,exp(logrAmax),exp(logrAmin));
+    fprintf(op,"%lf %lf %d %lf %lf %lf %lf \n",rA,dudxA,rbin,exp(logrAmax),exp(logrAmin),exp(logdudxAmax),exp(logdudxAmin));
     fclose(op);
     
     return 0;
@@ -195,6 +189,7 @@ int outshot(struct _input in, struct _fixed fix, double rA, double dudxA, double
     double r[rbin],vr,T,etot;
     double rho,vphi,Br,Bphi,Lr,kappa;
     double dvrdr,dTdr,detotdr,nume,deno;
+    double vphi_pre = 1.e99;
     set_r_from_rA_to_infty(rA,rstop,rbin,r);
     
     y[0] = 1.;
@@ -218,19 +213,24 @@ int outshot(struct _input in, struct _fixed fix, double rA, double dudxA, double
         
         rk(in,fix,rA,dudxA,x,dx,y,yp);
         
-        if (nume*deno < 0.){
+        if (nume*deno < 0. || isnan(y[0]) || vphi > vphi_pre){
             if (nume < 0.)
                 flag = 1;
-            else
+            else if (deno < 0.)
                 flag = 2;
+            else if (isnan(y[0]))
+                flag = 3;
+            else
+                flag = 5;
             break;
         }
         
+        vphi_pre = vphi;
     }
     fclose(op);
     
     if (i>=rbin-1 && nume < 0.)
-        flag = 3;
+        flag = 4;
     
     return flag;
 }
@@ -418,12 +418,12 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     /* bilinear extrapolation of the OPAL opacity table */
     int i,j,index_T_fit=0,index_R_fit=0;
     double log10R = log10rho-3.*(log10T-6.);
-    
+
     i=1;
     while(kappa_tab[i][0]<log10T && i<index_T)
         i++;
     index_T_fit = i;
-    
+
     if (index_T_fit == 1){
         //printf("Warning (T too small for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[1][0],log10R);
         index_T_fit = 2;
@@ -432,12 +432,12 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
         //printf("Warning (T too large for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[index_T-1][0],log10R);
         log10T = kappa_tab[index_T-1][0];
     }
-    
+
     j=1;
     while(kappa_tab[0][j]<log10R && j<index_R)
         j++;
     index_R_fit = j;
-    
+
     if (index_R_fit == 1){
         //printf("Warning (R too small for opal kappa): log10R = %le --> %le , log10T = %le, log10rho = %le \n",log10R,kappa_tab[0][1],log10T,log10rho);
         index_R_fit = 2;
@@ -446,15 +446,50 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
         //printf("Warning (R too large got opsl kappa): log10R = %le --> %le , log10T = %le \n",log10R,kappa_tab[0][index_R-1],log10T);
         log10R = kappa_tab[0][index_R-1];
     }
-    
+
     double kappa_Tdirect_min = (kappa_tab[index_T_fit-1][index_R_fit]-kappa_tab[index_T_fit-1][index_R_fit-1])/(kappa_tab[0][index_R_fit]-kappa_tab[0][index_R_fit-1])*(log10R-kappa_tab[0][index_R_fit-1])+kappa_tab[index_T_fit-1][index_R_fit-1];
     double kappa_Tdirect_max = (kappa_tab[index_T_fit][index_R_fit]-kappa_tab[index_T_fit][index_R_fit-1])/(kappa_tab[0][index_R_fit]-kappa_tab[0][index_R_fit-1])*(log10R-kappa_tab[0][index_R_fit-1])+kappa_tab[index_T_fit][index_R_fit-1];
     double log10kappa = (kappa_Tdirect_max-kappa_Tdirect_min)/(kappa_tab[index_T_fit][0]-kappa_tab[index_T_fit-1][0])*(log10T-kappa_tab[index_T_fit-1][0])+kappa_Tdirect_min;
-    
+
     //return .2;
     return pow(10.,log10kappa);
 
 }
+
+/* old version */
+//double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index_R])
+//{
+//    /* bilinear extrapolation of the OPAL opacity table */
+//    int i,j,index_T_fit=0,index_R_fit=0;
+//    double log10R = log10rho-3.*(log10T-6.);
+//
+//    i=1;
+//    while(kappa_tab[i][0]<log10T && i<index_T-1)
+//        i++;
+//    index_T_fit = i;
+//
+//    if (index_T_fit == 1){
+//        index_T_fit = 2;
+//        log10T = kappa_tab[1][0];
+//    } else if (index_T_fit == index_T-1){
+//        log10T = kappa_tab[index_T-1][0];
+//    }
+//
+//    j=1;
+//    while(kappa_tab[0][j]<log10R && j<index_R-1)
+//        j++;
+//    index_R_fit = j;
+//
+//    if (index_R_fit == 1)
+//        index_R_fit = 2;
+//    /* tableの外側にはバカ外挿 */
+//
+//    double kappa_Tdirect_min = (kappa_tab[index_T_fit-1][index_R_fit]-kappa_tab[index_T_fit-1][index_R_fit-1])/(kappa_tab[0][index_R_fit]-kappa_tab[0][index_R_fit-1])*(log10R-kappa_tab[0][index_R_fit-1])+kappa_tab[index_T_fit-1][index_R_fit-1];
+//    double kappa_Tdirect_max = (kappa_tab[index_T_fit][index_R_fit]-kappa_tab[index_T_fit][index_R_fit-1])/(kappa_tab[0][index_R_fit]-kappa_tab[0][index_R_fit-1])*(log10R-kappa_tab[0][index_R_fit-1])+kappa_tab[index_T_fit][index_R_fit-1];
+//    double log10kappa = (kappa_Tdirect_max-kappa_Tdirect_min)/(kappa_tab[index_T_fit][0]-kappa_tab[index_T_fit-1][0])*(log10T-kappa_tab[index_T_fit-1][0])+kappa_Tdirect_min;
+//
+//    return pow(10.,log10kappa);
+//}
 
 
 double solve_Rfld(double r, double T, double Lr)
