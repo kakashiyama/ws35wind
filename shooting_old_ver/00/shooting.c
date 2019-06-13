@@ -15,7 +15,7 @@ int main()
     /* trial parameters for each shot */
     int flag;
     double rstop = in.Rwd;
-    int rbin = 1000;
+    int rbin = 10000;
     int nshot = 1;
     int nshot_max = 50;
     double dudxA = .4001;
@@ -132,7 +132,7 @@ int inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double 
     
     double r[rbin],vr,T,etot;
     double rho,vphi,Br,Bphi,Lr,kappa;
-    double dvrdr,dTdr,detotdr,nume,deno,CCvsRad;
+    double dvrdr,dTdr,detotdr,nume,deno;
     set_r_from_rA_to_infty(rA,rstop,rbin,r);
     
     y[0] = 1.;
@@ -151,9 +151,8 @@ int inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double 
         etot = y[2]*fix.etotA;
         solve_constraint_eqs(in,fix,rA,r[i],vr,T,etot,&rho,&vphi,&Br,&Bphi,&Lr,&kappa);
         calc_derivatives(in,fix,rA,dudxA,r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,&dvrdr,&dTdr,&detotdr,&nume,&deno);
-        CCvsRad = calc_ratio_CCvsRad(vr,T,rho,detotdr);
-        fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e \n",
-                x,y[0],y[1],yp[0],x*x*y[0],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,etot,dvrdr,dTdr,detotdr,nume,deno,CCvsRad);
+        fprintf(op,"%12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e %12.7e\n",
+                x,y[0],y[1],yp[0],x*x*y[0],r[i],vr,T,rho,vphi,Br,Bphi,Lr,kappa,etot,dvrdr,dTdr,detotdr,nume,deno);
         
         rk(in,fix,rA,dudxA,x,dx,y,yp);
         
@@ -163,9 +162,6 @@ int inshot(struct _input in, struct _fixed fix, double rA, double dudxA, double 
             break;
         } else if ( isnan(y[0])) {
             flag = 2;
-            break;
-        } else if (CCvsRad < 1.) {
-            flag = 4;
             break;
         }
         
@@ -429,11 +425,12 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     index_T_fit = i;
 
     if (index_T_fit == 1){
+        //printf("Warning (T too small for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[1][0],log10R);
         index_T_fit = 2;
         log10T = kappa_tab[1][0];
     } else if (index_T_fit == index_T){
-        /* extrapolating the table for higher temperatures */;
-        index_T_fit --;
+        //printf("Warning (T too large for opal kappa): log10T = %le --> %le , log10R = %le \n",log10T,kappa_tab[index_T-1][0],log10R);
+        log10T = kappa_tab[index_T-1][0];
     }
 
     j=1;
@@ -442,9 +439,11 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     index_R_fit = j;
 
     if (index_R_fit == 1){
+        //printf("Warning (R too small for opal kappa): log10R = %le --> %le , log10T = %le, log10rho = %le \n",log10R,kappa_tab[0][1],log10T,log10rho);
         index_R_fit = 2;
         log10R = kappa_tab[0][1];
     } else if (index_R_fit == index_R){
+        //printf("Warning (R too large got opsl kappa): log10R = %le --> %le , log10T = %le \n",log10R,kappa_tab[0][index_R-1],log10T);
         log10R = kappa_tab[0][index_R-1];
     }
 
@@ -452,9 +451,45 @@ double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index
     double kappa_Tdirect_max = (kappa_tab[index_T_fit][index_R_fit]-kappa_tab[index_T_fit][index_R_fit-1])/(kappa_tab[0][index_R_fit]-kappa_tab[0][index_R_fit-1])*(log10R-kappa_tab[0][index_R_fit-1])+kappa_tab[index_T_fit][index_R_fit-1];
     double log10kappa = (kappa_Tdirect_max-kappa_Tdirect_min)/(kappa_tab[index_T_fit][0]-kappa_tab[index_T_fit-1][0])*(log10T-kappa_tab[index_T_fit-1][0])+kappa_Tdirect_min;
 
+    //return .2;
     return pow(10.,log10kappa);
 
 }
+
+/* old version */
+//double kappa_fit(double log10T, double log10rho, double kappa_tab[index_T][index_R])
+//{
+//    /* bilinear extrapolation of the OPAL opacity table */
+//    int i,j,index_T_fit=0,index_R_fit=0;
+//    double log10R = log10rho-3.*(log10T-6.);
+//
+//    i=1;
+//    while(kappa_tab[i][0]<log10T && i<index_T-1)
+//        i++;
+//    index_T_fit = i;
+//
+//    if (index_T_fit == 1){
+//        index_T_fit = 2;
+//        log10T = kappa_tab[1][0];
+//    } else if (index_T_fit == index_T-1){
+//        log10T = kappa_tab[index_T-1][0];
+//    }
+//
+//    j=1;
+//    while(kappa_tab[0][j]<log10R && j<index_R-1)
+//        j++;
+//    index_R_fit = j;
+//
+//    if (index_R_fit == 1)
+//        index_R_fit = 2;
+//    /* tableの外側にはバカ外挿 */
+//
+//    double kappa_Tdirect_min = (kappa_tab[index_T_fit-1][index_R_fit]-kappa_tab[index_T_fit-1][index_R_fit-1])/(kappa_tab[0][index_R_fit]-kappa_tab[0][index_R_fit-1])*(log10R-kappa_tab[0][index_R_fit-1])+kappa_tab[index_T_fit-1][index_R_fit-1];
+//    double kappa_Tdirect_max = (kappa_tab[index_T_fit][index_R_fit]-kappa_tab[index_T_fit][index_R_fit-1])/(kappa_tab[0][index_R_fit]-kappa_tab[0][index_R_fit-1])*(log10R-kappa_tab[0][index_R_fit-1])+kappa_tab[index_T_fit][index_R_fit-1];
+//    double log10kappa = (kappa_Tdirect_max-kappa_Tdirect_min)/(kappa_tab[index_T_fit][0]-kappa_tab[index_T_fit-1][0])*(log10T-kappa_tab[index_T_fit-1][0])+kappa_Tdirect_min;
+//
+//    return pow(10.,log10kappa);
+//}
 
 
 double solve_Rfld(double r, double T, double Lr)
@@ -476,24 +511,4 @@ double calc_lambda(double Rfld)
 double solve_dTdr(double rho, double kappa, double T, double Rfld)
 {
     return -Rfld*kappa*rho*T/4.;
-}
-
-
-double calc_epsCC(double T, double rho)
-{
-    double f_CC = 1.;
-    double X12 = 0.5;
-    double T9 = T/1.e9;
-    double T9alpha = T9/(1.+0.067*T9);
-    
-    return 5.49e43*f_CC*rho*pow(X12,2.)*pow(T9,-3./2.)*pow(T9alpha,5./6.)*exp(-84.165/pow(T9alpha,1./3.))/(exp(-0.01*pow(T9alpha,4.)) + 5.56e-3*exp(1.685*pow(T9alpha,2./3.)));
-}
-
-
-double calc_ratio_CCvsRad(double vr, double T, double rho, double detotdr)
-{
-    double epsCC = calc_epsCC(T,rho);
-    double detotdrCC = epsCC/vr;
-    
-    return detotdr/detotdrCC;
 }

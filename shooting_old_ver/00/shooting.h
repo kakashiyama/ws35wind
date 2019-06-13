@@ -17,10 +17,6 @@ double solve_Rfld(double r, double T, double Lr);
 double calc_lambda(double Rfld);
 double solve_dTdr(double rho, double kappa, double T, double Rfld);
 double generate_random_trial(double xmin, double xmax);
-double calc_epsCC(double T, double rho);
-double calc_ratio_CCvsRad(double vr, double T, double rho, double detotdr);
-
-
 
 struct _input{
   double mu_mol;
