@@ -5,7 +5,7 @@ se tics font "Times-Roman"
 se size 0.7,0.7
 se output "vr.eps"
 se log
-se xrange [1.e8:10*Rsun]
+se xrange [1.e8:]
 se yrange [:1.e10]
 se format x "10^{%L}"
 se format y "10^{%L}"

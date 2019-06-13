@@ -34,7 +34,7 @@ se output "vphi.eps"
 se ylabel "wind tangential velocity  v_{/Symbol j} [cm/s]" font "Times-Roman, 16"
 plot \
 "../inshot.dat" usi 6:($10) w l title "",\
-"../outshot.dat" usi 6:( $10) w l title ""
+"../outshot.dat" usi 6:($10) w l title ""
 
 unse yrange
 se output "Bphi.eps"
