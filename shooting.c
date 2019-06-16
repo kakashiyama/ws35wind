@@ -4,8 +4,6 @@
 #include "const.h"
 #include "shooting.h"
 
-/* number of radial bin */
-
 int main()
 {
     /* load input file */
@@ -15,13 +13,13 @@ int main()
     /* trial parameters for each shot */
     int flag;
     double rstop = in.Rwd;
-    int rbin = 1000;
+    int rbin = 10000;
     int nshot = 1;
     int nshot_max = 50;
-    double dudxA = .4001;
+    double dudxA = .3921;
     
-    double logrAmax = log(.5*Rsun);
-    double logrAmin = log(2.*sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
+    double logrAmax = log(1.*Rsun);
+    double logrAmin = log(sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
     double rA = exp(0.5*(logrAmax+logrAmin));
     
     flag = 99;
@@ -43,11 +41,11 @@ int main()
         nshot++;
     }
     
-    double logdudxAmax = log(2*dudxA);
-    double logdudxAmin = log(dudxA/2);
+    double logdudxAmax = log(2.*dudxA);
+    double logdudxAmin = log(dudxA/2.);
     nshot = 1;
     flag = 99;
-    rstop = 10.*rA*(rA/in.Rwd);
+    rstop = 25.*rA*(rA/in.Rwd);
     while (flag != 0 && nshot < nshot_max){
         fix = calc_fixed_para(in,rA,dudxA);
         flag = outshot(in,fix,rA,dudxA,rstop,rbin);
@@ -407,7 +405,7 @@ void load_kappa_table(double kappa_tab[index_T][index_R])
     int i,j;
     
     FILE *ip;
-    ip = fopen("tab46.dat","r");
+    ip = fopen("tab56.dat","r");
     for (i=0; i<index_T; i++) {
         for (j=0; j<index_R; j++) {
             fscanf(ip,"%le ",&kappa_tab[i][j]);
