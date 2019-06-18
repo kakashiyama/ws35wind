@@ -13,11 +13,11 @@ int main()
     /* trial parameters for each shot */
     int flag;
     double rstop = in.Rwd;
-    int rbin = 10000;
+    int rbin = 5000;
     int nshot = 1;
     int nshot_max = 50;
-    double dudxA = .3921;
-    
+    double dudxA = 0.3914;
+
     double logrAmax = log(1.*Rsun);
     double logrAmin = log(sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
     double rA = exp(0.5*(logrAmax+logrAmin));
@@ -45,7 +45,7 @@ int main()
     double logdudxAmin = log(dudxA/2.);
     nshot = 1;
     flag = 99;
-    rstop = 25.*rA*(rA/in.Rwd);
+    rstop = 10.*rA*(rA/in.Rwd);
     while (flag != 0 && nshot < nshot_max){
         fix = calc_fixed_para(in,rA,dudxA);
         flag = outshot(in,fix,rA,dudxA,rstop,rbin);
