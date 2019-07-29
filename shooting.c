@@ -13,12 +13,12 @@ int main()
     /* trial parameters for each shot */
     int flag;
     double rstop = in.Rwd;
-    int rbin = 5000;
+    int rbin = 20000;
     int nshot = 1;
     int nshot_max = 50;
-    double dudxA = 0.3914;
+    double dudxA = 4.45e-01;
 
-    double logrAmax = log(1.*Rsun);
+    double logrAmax = log(0.15*Rsun);
     double logrAmin = log(sqrt(in.LrA/(4.*M_PI*arad*pow(in.TA,4.)*C)));
     double rA = exp(0.5*(logrAmax+logrAmin));
     
@@ -41,11 +41,12 @@ int main()
         nshot++;
     }
     
-    double logdudxAmax = log(2.*dudxA);
-    double logdudxAmin = log(dudxA/2.);
+    rbin = 20000;
+    double logdudxAmax = log(1.05*dudxA);
+    double logdudxAmin = log(dudxA/1.05);
     nshot = 1;
     flag = 99;
-    rstop = 10.*rA*(rA/in.Rwd);
+    rstop = 20.*rA*(rA/in.Rwd);
     while (flag != 0 && nshot < nshot_max){
         fix = calc_fixed_para(in,rA,dudxA);
         flag = outshot(in,fix,rA,dudxA,rstop,rbin);
@@ -67,7 +68,7 @@ int main()
 
     FILE *op;
     op = fopen("output.dat","w");
-    fprintf(op,"rA [cm] dudxA rbin rAmax rAmin");
+    fprintf(op,"rA [cm] dudxA rbin rAmax rAmin \n");
     fprintf(op,"%lf %lf %d %lf %lf %lf %lf \n",rA,dudxA,rbin,exp(logrAmax),exp(logrAmin),exp(logdudxAmax),exp(logdudxAmin));
     fclose(op);
     
