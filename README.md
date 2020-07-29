@@ -3,11 +3,11 @@ Finding a rotating magnetic wind solution from a magnetic white dwarf <br>
 ref) [Kashiyama, Fujisawa, and Shigeyama 2019](https://iopscience.iop.org/article/10.3847/1538-4357/ab4e97)
 
 ## input
-- input.dat : input parameters <br>
-- tabXX.dat : opacity table 
+- **input.dat** : input parameters 
+- **tabXX.dat** : opacity table 
 
 ## code
-shooting.c : finding a wind solution using a shooting method <br>
+- **shooting.c** : finding a wind solution using a shooting method <br>
 
 ## how to run the code
 `gcc shooting.c` 
@@ -33,9 +33,9 @@ If you get a << flag 0 >>, or the "Out-shot No." exceeds the maximum value (50 b
 
 The results of the final trials of the inshot and outshot sequences are outputted in 
 
-- output.dat : eigenvalues of the wind solution  
-- inshot.dat : wind profile inside the Alfven point
-- outshot.dat : wind profile outside the Alfven point
+- **output.dat** : eigenvalues of the wind solution  
+- **inshot.dat** : wind profile inside the Alfven point
+- **outshot.dat** : wind profile outside the Alfven point
 
 When you get << flag 0 >> for both the inshot and outshot, it is a wind solution. 
 
