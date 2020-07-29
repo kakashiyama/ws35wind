@@ -1,11 +1,16 @@
 # ws35wind 
-Finding rotating magnetic wind solutions of magnetic white dwarf
+Finding a rotating magnetic wind solution from a magnetic white dwarf
 
-## how to run
+## input
+input.dat : input parameters
+tabXX.dat : opacity table
+
+## code file
+shooting.c : finding a wind solution using a shooting method (Kashiyama, Fujisawa, and Shigeyama 2019)
+
+## how to run the code
 gcc shooting.c 
 
-## how to plot 
+## how to plot the results
 gnuplot plt/hydro.plt 
 
-## input.dat
-input parameters
