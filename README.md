@@ -1,5 +1,6 @@
 # ws35wind 
-Finding a rotating magnetic wind solution from a magnetic white dwarf
+Finding a rotating magnetic wind solution from a magnetic white dwarf <br>
+ref) [Kashiyama, Fujisawa, and Shigeyama 2019](https://iopscience.iop.org/article/10.3847/1538-4357/ab4e97)
 
 ## input
 - input.dat : input parameters <br>
@@ -7,7 +8,6 @@ Finding a rotating magnetic wind solution from a magnetic white dwarf
 
 ## code
 shooting.c : finding a wind solution using a shooting method <br>
-ref) [Kashiyama, Fujisawa, and Shigeyama 2019](https://iopscience.iop.org/article/10.3847/1538-4357/ab4e97)
 
 ## how to run the code
 `gcc shooting.c` 
