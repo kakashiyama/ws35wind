@@ -12,6 +12,11 @@ ref) Kashiyama, Fujisawa, and Shigeyama 2019
 ## how to run the code
 `gcc shooting.c` 
 
+## output
+- output.dat : the eigenvalues of the wind solution  
+- inshot.dat : wind profile inside the Alfven point
+- outshot.dat : wind profile outside the Alfven point
+
 ## how to plot the results
 `cd plt` <br>
 `gnuplot plt/hydro.plt`
