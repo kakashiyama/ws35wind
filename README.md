@@ -1,2 +1,3 @@
-# ws35wind
-wind solution of ws35
+# ws35wind 
+Finding rotating magnetic wind solutions of magnetic white dwarf
+
