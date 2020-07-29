@@ -31,7 +31,7 @@ It is searching a wind solution outside the Alfven radius.
 
 If you get a << flag 0 >>, or the "Out-shot No." exceeds the maximum value (50 by default), it finishes the calculation.
 
-The results of the final trials of the inshot and outshot sequences are outputed in 
+The results of the final trials of the inshot and outshot sequences are outputted in 
 
 - output.dat : eigenvalues of the wind solution  
 - inshot.dat : wind profile inside the Alfven point
