@@ -37,7 +37,7 @@ The results of the final trials of the inshot and outshot sequences are outputte
 - **inshot.dat** : wind profile inside the Alfven point
 - **outshot.dat** : wind profile outside the Alfven point
 
-<font color="Red">When you get << flag 0 >> for both the inshot and outshot, it is a wind solution</font>. 
+<font color="green">When you get << flag 0 >> for both the inshot and outshot, it is a wind solution</font>. 
 
 
 ## how to plot the results
