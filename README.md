@@ -13,7 +13,7 @@ ref) Kashiyama, Fujisawa, and Shigeyama 2019
 `gcc shooting.c` 
 
 ## output
-- output.dat : the eigenvalues of the wind solution  
+- output.dat : eigenvalues of the wind solution  
 - inshot.dat : wind profile inside the Alfven point
 - outshot.dat : wind profile outside the Alfven point
 
