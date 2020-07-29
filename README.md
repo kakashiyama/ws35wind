@@ -13,5 +13,6 @@ ref) Kashiyama, Fujisawa, and Shigeyama 2019
 gcc shooting.c 
 
 ## how to plot the results
-gnuplot plt/hydro.plt 
+$ cd plt <br>
+$ gnuplot plt/hydro.plt 
 
