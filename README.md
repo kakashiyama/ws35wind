@@ -2,6 +2,8 @@
 Finding a rotating magnetic wind solution from a magnetic white dwarf <br>
 ref) [Kashiyama, Fujisawa, and Shigeyama 2019](https://iopscience.iop.org/article/10.3847/1538-4357/ab4e97)
 
+*TODO: opacity table needs to be refined for high temperature regions*
+
 ## input
 - **input.dat** : input parameters 
 - **tabXX.dat** : opacity table 
