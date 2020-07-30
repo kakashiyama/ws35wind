@@ -1,5 +1,5 @@
 # ws35wind 
-Finding a rotating magnetic wind solution from a magnetic white dwarf <br>
+Solving an eigenvalue problem of steady wind equations for a fast-spinning strongly magnetized white dwarf. <br>
 ref) [Kashiyama, Fujisawa, and Shigeyama 2019](https://iopscience.iop.org/article/10.3847/1538-4357/ab4e97)
 
 *TODO: opacity table needs to be refined for high temperature regions*
@@ -9,7 +9,7 @@ ref) [Kashiyama, Fujisawa, and Shigeyama 2019](https://iopscience.iop.org/articl
 - **tabXX.dat** : opacity table 
 
 ## code
-- **shooting.c** : finding a wind solution using a shooting method <br>
+- **shooting.c** : finding a wind solution using a shooting method with rk4 <br>
 
 ## how to run the code
 `gcc shooting.c` 
